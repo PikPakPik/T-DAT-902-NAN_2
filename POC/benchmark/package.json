@@ -1,0 +1,22 @@
+{
+  "name": "benchmark",
+  "version": "1.0.0",
+  "description": "Frontend benchmark for big polygon map rendering (Next/Nuxt/Angular)",
+  "scripts": {
+    "setup:python": "python3 -m venv .venv && .venv/bin/pip install -r apps/streamlit-map/requirements.txt",
+    "download:data": "bash scripts/download_data.sh",
+    "sync:data": "bash scripts/sync_data.sh",
+    "dev:next": "npm --prefix apps/next-map run dev -- --port 3001 --hostname 127.0.0.1",
+    "dev:nuxt": "npm --prefix apps/nuxt-map run dev -- --port 3002 --host 127.0.0.1",
+    "dev:angular": "npm --prefix apps/angular-map run start -- --port 3003 --host 127.0.0.1",
+    "dev:streamlit": ".venv/bin/python -m streamlit run apps/streamlit-map/app.py --server.port 3004 --server.address 127.0.0.1 --server.headless true --server.enableStaticServing true",
+    "benchmark": "node scripts/benchmark.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+apps/*/node_modules/
+apps/*/.next/
+apps/*/.nuxt/
+apps/*/.output/
+apps/*/dist/
+apps/*/.angular/
+apps/*/coverage/
+playwright-report/
+test-results/
+data/raw/*.json
+data/raw/*.gz
+apps/*/public/data/*.json
+apps/streamlit-map/static/data/*.json

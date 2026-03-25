@@ -1,0 +1,278 @@
+{
+  "repeats": 2,
+  "trajectories": [
+    {
+      "name": "to_communes",
+      "center": [
+        2.35,
+        48.86
+      ],
+      "zoom": 8,
+      "duration": 900
+    },
+    {
+      "name": "to_sections",
+      "center": [
+        2.35,
+        48.86
+      ],
+      "zoom": 12,
+      "duration": 1200
+    },
+    {
+      "name": "to_batiments",
+      "center": [
+        2.35,
+        48.86
+      ],
+      "zoom": 15,
+      "duration": 1500
+    },
+    {
+      "name": "back_france",
+      "center": [
+        2.5,
+        46.7
+      ],
+      "zoom": 5.5,
+      "duration": 1300
+    }
+  ],
+  "summary": [
+    {
+      "framework": "next",
+      "status": "ok",
+      "runs": 2,
+      "mapLoadedP50": 1657.3000000000002,
+      "mapLoadedP95": 2569.4500000000003,
+      "sourceLoadedP50": 491.5,
+      "sourceLoadedP95": 806.05,
+      "firstIdleP50": 4692.05,
+      "firstIdleP95": 5689.205,
+      "interactionP50": 1971,
+      "interactionP95": 3050.5849999964234,
+      "usedJSHeapP50": 162000000,
+      "trajectoryStats": {
+        "to_communes": {
+          "p50": 3023.75,
+          "p95": 3104.2549999892713,
+          "n": 2
+        },
+        "to_sections": {
+          "p50": 1723.0999999940395,
+          "p95": 1744.159999999404,
+          "n": 2
+        },
+        "to_batiments": {
+          "p50": 2296.2000000029802,
+          "p95": 2386.8300000056624,
+          "n": 2
+        },
+        "back_france": {
+          "p50": 1728.3999999910593,
+          "p95": 1740.7299999937413,
+          "n": 2
+        }
+      }
+    },
+    {
+      "framework": "nuxt",
+      "status": "ok",
+      "runs": 2,
+      "mapLoadedP50": 551.75,
+      "mapLoadedP95": 605.795,
+      "sourceLoadedP50": 150.6,
+      "sourceLoadedP95": 179.04,
+      "firstIdleP50": 2360.1499999999996,
+      "firstIdleP95": 2385.305,
+      "interactionP50": 1755.800000011921,
+      "interactionP95": 2055.845000003278,
+      "usedJSHeapP50": 167000000,
+      "trajectoryStats": {
+        "to_communes": {
+          "p50": 1799.5999999940395,
+          "p95": 1828.1299999833107,
+          "n": 2
+        },
+        "to_sections": {
+          "p50": 1631.9000000059605,
+          "p95": 1656.8300000220538,
+          "n": 2
+        },
+        "to_batiments": {
+          "p50": 2050.5499999970198,
+          "p95": 2066.435000015795,
+          "n": 2
+        },
+        "back_france": {
+          "p50": 1710.2999999970198,
+          "p95": 1740.360000015795,
+          "n": 2
+        }
+      }
+    },
+    {
+      "framework": "angular",
+      "status": "ok",
+      "runs": 2,
+      "mapLoadedP50": 543.4,
+      "mapLoadedP95": 562.75,
+      "sourceLoadedP50": 131.85000000000002,
+      "sourceLoadedP95": 133.245,
+      "firstIdleP50": 2441.1499999999996,
+      "firstIdleP95": 2461.445,
+      "interactionP50": 1876.6000000089407,
+      "interactionP95": 2089.504999986291,
+      "usedJSHeapP50": 157000000,
+      "trajectoryStats": {
+        "to_communes": {
+          "p50": 1891.0499999970198,
+          "p95": 1892.8949999943375,
+          "n": 2
+        },
+        "to_sections": {
+          "p50": 1711.2000000178814,
+          "p95": 1848.9000000178814,
+          "n": 2
+        },
+        "to_batiments": {
+          "p50": 2073.949999988079,
+          "p95": 2120.614999982715,
+          "n": 2
+        },
+        "back_france": {
+          "p50": 1670.7999999970198,
+          "p95": 1684.3000000104307,
+          "n": 2
+        }
+      }
+    },
+    {
+      "framework": "streamlit",
+      "status": "ok",
+      "runs": 2,
+      "mapLoadedP50": 961,
+      "mapLoadedP95": 1150,
+      "sourceLoadedP50": 959,
+      "sourceLoadedP95": 1148.9,
+      "firstIdleP50": null,
+      "firstIdleP95": null,
+      "interactionP50": null,
+      "interactionP95": null,
+      "usedJSHeapP50": 68000000,
+      "trajectoryStats": {}
+    }
+  ],
+  "raw": {
+    "next": [
+      {
+        "status": "ok",
+        "mapLoadedMs": 2670.8,
+        "sourceLoadedMs": 841,
+        "firstIdleMs": 5800,
+        "interactionMs": null,
+        "trajectoryDurations": {
+          "to_communes": 3113.199999988079,
+          "to_sections": 1746.5,
+          "to_batiments": 2195.5,
+          "back_france": 1742.0999999940395
+        },
+        "usedJSHeapSize": 167000000
+      },
+      {
+        "status": "ok",
+        "mapLoadedMs": 643.8,
+        "sourceLoadedMs": 142,
+        "firstIdleMs": 3584.1,
+        "interactionMs": null,
+        "trajectoryDurations": {
+          "to_communes": 2934.300000011921,
+          "to_sections": 1699.699999988079,
+          "to_batiments": 2396.9000000059605,
+          "back_france": 1714.699999988079
+        },
+        "usedJSHeapSize": 157000000
+      }
+    ],
+    "nuxt": [
+      {
+        "status": "ok",
+        "mapLoadedMs": 611.8,
+        "sourceLoadedMs": 182.2,
+        "firstIdleMs": 2388.1,
+        "interactionMs": null,
+        "trajectoryDurations": {
+          "to_communes": 1767.9000000059605,
+          "to_sections": 1604.199999988079,
+          "to_batiments": 2068.2000000178814,
+          "back_france": 1676.8999999761581
+        },
+        "usedJSHeapSize": 167000000
+      },
+      {
+        "status": "ok",
+        "mapLoadedMs": 491.7,
+        "sourceLoadedMs": 119,
+        "firstIdleMs": 2332.2,
+        "interactionMs": null,
+        "trajectoryDurations": {
+          "to_communes": 1831.2999999821186,
+          "to_sections": 1659.6000000238419,
+          "to_batiments": 2032.8999999761581,
+          "back_france": 1743.7000000178814
+        },
+        "usedJSHeapSize": 167000000
+      }
+    ],
+    "angular": [
+      {
+        "status": "ok",
+        "mapLoadedMs": 521.9,
+        "sourceLoadedMs": 130.3,
+        "firstIdleMs": 2418.6,
+        "interactionMs": null,
+        "trajectoryDurations": {
+          "to_communes": 1889,
+          "to_sections": 1864.2000000178814,
+          "to_batiments": 2022.0999999940395,
+          "back_france": 1655.7999999821186
+        },
+        "usedJSHeapSize": 157000000
+      },
+      {
+        "status": "ok",
+        "mapLoadedMs": 564.9,
+        "sourceLoadedMs": 133.4,
+        "firstIdleMs": 2463.7,
+        "interactionMs": null,
+        "trajectoryDurations": {
+          "to_communes": 1893.0999999940395,
+          "to_sections": 1558.2000000178814,
+          "to_batiments": 2125.7999999821186,
+          "back_france": 1685.800000011921
+        },
+        "usedJSHeapSize": 157000000
+      }
+    ],
+    "streamlit": [
+      {
+        "status": "ok",
+        "mapLoadedMs": 1171,
+        "sourceLoadedMs": 1170,
+        "firstIdleMs": null,
+        "interactionMs": null,
+        "trajectoryDurations": {},
+        "usedJSHeapSize": 68000000
+      },
+      {
+        "status": "ok",
+        "mapLoadedMs": 751,
+        "sourceLoadedMs": 748,
+        "firstIdleMs": null,
+        "interactionMs": null,
+        "trajectoryDurations": {},
+        "usedJSHeapSize": 68000000
+      }
+    ]
+  }
+}

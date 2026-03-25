@@ -1,0 +1,247 @@
+
+> benchmark@1.0.0 benchmark
+> node scripts/benchmark.mjs
+
+
+=== NEXT ===
+[next] 
+> next-map@0.1.0 dev
+> next dev --port 3001 --hostname 127.0.0.1
+
+[next] ▲ Next.js 16.2.1 (Turbopack)
+[next] - Local:         http://127.0.0.1:3001
+[next] - Network:       http://127.0.0.1:3001
+[next] ✓ Ready in 328ms
+[next] ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/atressel/Documents/Epitech/Projets/T-DAT-902-NAN_2/POC/benchmark/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/atressel/Documents/Epitech/Projets/T-DAT-902-NAN_2/POC/benchmark/apps/next-map/package-lock.json
+
+[next] Creating turbopack project {
+  dir: '/Users/atressel/Documents/Epitech/Projets/T-DAT-902-NAN_2/POC/benchmark/apps/next-map',
+  testMode: true
+}
+[next] 
+[next]  GET /?source=vector 200 in 262ms (next.js: 83ms, application-code: 179ms)
+[next]  GET /?source=vector 200 in 35ms (next.js: 2ms, application-code: 33ms)
+[next] [?25h[next] 
+
+=== NUXT ===
+[nuxt] 
+> dev
+> nuxt dev --port 3002 --host 127.0.0.1
+
+[nuxt] │
+●  Nuxt 4.4.2 (with Nitro 2.13.2, Vite 7.3.1 and Vue 3.5.30)
+[nuxt] 
+  ➜ Local:    http://127.0.0.1:3002/
+  ➜ Network:  use --host to expose
+
+[nuxt] [nuxt] modules:before: 0.055ms
+[nuxt] [nuxt] pages:routerOptions: 0.018ms
+[nuxt] [nuxt] pages:extend: 0.015ms
+[nuxt] [nuxt] pages:resolved: 0.009ms
+[nuxt] ℹ Module nuxt:pages took 4.03ms to setup.
+[nuxt] ℹ Module nuxt:meta took 0.88ms to setup.
+[nuxt] ℹ Module nuxt:components took 2.66ms to setup.
+[nuxt] ℹ Module nuxt:compiler took 0.08ms to setup.
+[nuxt] ℹ Module nuxt:imports took 0.82ms to setup.
+[nuxt] ℹ Module nuxt:nuxt-config-schema took 0.84ms to setup.
+[nuxt] ℹ Module @nuxt/telemetry took 0.1ms to setup.
+[nuxt] [nuxt] imports:dirs: 0.024ms
+[nuxt] [nuxt] imports:sources: 0.027ms
+[nuxt] [nuxt] imports:context: 0.018ms
+[nuxt] [nuxt] imports:extend: 0.018ms
+[nuxt] [nuxt] builder:generateApp: 0.012ms
+[nuxt] [nuxt] schema:extend: 0.017ms
+[nuxt] [nuxt] schema:resolved: 0.011ms
+[nuxt] [nuxt] telemetry:setup: 0.012ms
+[nuxt] [nuxt] modules:done: 24.073ms
+[nuxt] [nuxt] nitro:config: 34.265ms
+[nuxt] [nuxt] nitro:init: 0.08ms
+[nuxt] [nuxt] ready: 0.047ms
+[nuxt] [nuxt] listen: 0.005ms
+[nuxt] [nuxt] prepare:types: 0.831ms
+[nuxt] [nuxt] components:dirs: 0.007ms
+[nuxt] [nuxt] app:resolve: 0.461ms
+[nuxt] [nuxt] components:extend: 0.07ms
+[nuxt] [nuxt] app:templates: 6.98ms
+[nuxt] [nuxt] nitro:prepare:types: 0.048ms
+[nuxt] [nuxt] ℹ Compiled app-component.mjs in 3.08ms
+[nuxt] [nuxt] ℹ Compiled types/app.config.d.ts in 3.05ms
+[nuxt] [nuxt] ℹ Compiled app.config.mjs in 3.06ms
+[nuxt] [nuxt] ℹ Compiled types/build.d.ts in 3.08ms
+[nuxt] [nuxt] ℹ Compiled nitro.client.mjs in 2.9ms
+[nuxt] [nuxt] ℹ Compiled css.mjs in 2.9ms
+[nuxt] [nuxt] ℹ Compiled fetch.mjs in 2.91ms
+[nuxt] [nuxt] ℹ Compiled error-component.mjs in 2.93ms
+[nuxt] [nuxt] ℹ Compiled global-polyfills.mjs in 2.95ms
+[nuxt] [nuxt] ℹ Compiled layouts.mjs in 2.98ms
+[nuxt] [nuxt] ℹ Compiled middleware.mjs in 2.97ms
+[nuxt] [nuxt] ℹ Compiled nuxt.config.mjs in 2.75ms
+[nuxt] [nuxt] ℹ Compiled paths.mjs in 2.6ms
+[nuxt] ℹ Compiled root-component.mjs in 2.6ms
+[nuxt] [nuxt] ℹ Compiled types/modules.d.ts in 2.61ms
+[nuxt] [nuxt] ℹ Compiled test-component-wrapper.mjs in 2.38ms
+[nuxt] [nuxt] ℹ Compiled types/vue-shim.d.ts in 2.4ms
+[nuxt] [nuxt] ℹ Compiled types/nitro-layouts.d.ts in 2.42ms
+[nuxt] [nuxt] ℹ Compiled types/builder-env.d.ts in 2.44ms
+[nuxt] [nuxt] ℹ Compiled pages.mjs in 2.46ms
+[nuxt] [nuxt] ℹ Compiled router.options.mjs in 2.48ms
+[nuxt] [nuxt] ℹ Compiled types/middleware.d.ts in 2.5ms
+[nuxt] [nuxt] ℹ Compiled unhead-options.mjs in 2.52ms
+[nuxt] [nuxt] ℹ Compiled unhead.config.mjs in 2.53ms
+[nuxt] [nuxt] ℹ Compiled components.d.ts in 2.55ms
+[nuxt] [nuxt] ℹ Compiled types/components.d.ts in 1.87ms
+[nuxt] [nuxt] ℹ Compiled components.plugin.mjs in 1.59ms
+[nuxt] [nuxt] ℹ Compiled component-names.mjs in 1.56ms
+[nuxt] [nuxt] ℹ Compiled components.islands.mjs in 1.56ms
+[nuxt] [nuxt] ℹ Compiled component-chunk.mjs in 1.53ms
+[nuxt] [nuxt] ℹ Compiled route-rules.mjs in 2.9ms
+[nuxt] [nuxt] ℹ Compiled imports.mjs in 3.22ms
+[nuxt] [nuxt] ℹ Compiled imports.d.ts in 3.23ms
+[nuxt] [nuxt] ℹ Compiled types/nitro-nuxt.d.ts in 3.24ms
+[nuxt] [nuxt] ℹ Compiled types/shared-imports.d.ts in 4.03ms
+[nuxt] [nuxt] ℹ Compiled types/runtime-config.d.ts in 5.46ms
+[nuxt] [nuxt] ℹ Compiled types/imports.d.ts in 4.16ms
+[nuxt] [nuxt] ℹ Compiled plugins.server.mjs in 5.44ms
+[nuxt] [nuxt] ℹ Compiled plugins.client.mjs in 6.1ms
+[nuxt] [nuxt] ℹ Compiled types/plugins.d.ts in 6.43ms
+[nuxt] [nuxt] imports:extend: 0.008ms
+[nuxt] [nuxt] builder:generateApp: 0.004ms
+[nuxt] [nuxt] app:templatesGenerated: 0.792ms
+[nuxt] [nuxt] build:before: 1.801ms
+[nuxt] [nuxt] vite:extend: 1.602ms
+[nuxt] [nuxt] vite:extendConfig: 0.201ms
+[nuxt] [nuxt] vite:configResolved: 0.005ms
+[nuxt] [nuxt] server:devHandler: 0.032ms
+[nuxt] ℹ Re-optimizing dependencies because vite config has changed
+[nuxt] [nuxt] vite:serverCreated: 0.059ms
+[nuxt] ✔ Vite client built in 23ms
+[nuxt] [nuxt] vite:extendConfig: 2.171ms
+[nuxt] [nuxt] vite:configResolved: 0.005ms
+[nuxt] [nuxt] vite:serverCreated: 0.546ms
+[nuxt] ✔ Vite server built in 26ms
+[nuxt] [nuxt] schema:beforeWrite: 0.005ms
+[nuxt] [nuxt] schema:written: 0.006ms
+[nuxt] [nuxt] nitro:build:before: 0.004ms
+[nuxt] [nitro] build:before: 0.083ms
+[nuxt] [nitro] rollup:before: 5.689ms
+[nuxt] [nitro] dev:start: 0.017ms
+[nuxt] [nitro] types:extend: 0.044ms
+[nuxt] [nitro] ✔ Nuxt Nitro server built in 370ms
+[nuxt] [nitro] dev:reload: 1.645ms
+[nuxt] [nitro] compiled: 2.497ms
+[nuxt] [nuxt] build:done: 404.618ms
+[nuxt] ℹ Vite server warmed up in 1ms
+[nuxt] ℹ Vite client warmed up in 1ms
+[nuxt] ⚙ Dev server (internal) initialized in 1511ms
+[nuxt] ⚙ > Nitro Start (6ms)
+[nuxt] [nitro-runtime] request: 0.151ms
+[nuxt] [nitro-runtime] render:before: 0.008ms
+[nuxt] [nuxt-app] app:created: 0.351ms
+[nuxt] [nuxt-app] vue:setup: 0.009ms
+[nuxt] [nuxt-app] app:rendered: 0.072ms
+[nitro-runtime] render:html: 0.337ms
+[nitro-runtime] render:response: 0.01ms
+[nitro-runtime] beforeResponse: 0.005ms
+[nitro-runtime] dev:ssr-logs: 0.004ms
+[nitro-runtime] afterResponse: 0.16ms
+[nuxt] [nitro-runtime] request: 0.032ms
+[nuxt] [nitro-runtime] render:before: 0.007ms
+[nuxt] [nuxt-app] app:created: 0.114ms
+[nuxt] [nuxt-app] vue:setup: 0.004ms
+[nuxt] [nuxt-app] app:rendered: 0.012ms
+[nuxt] [nitro-runtime] render:html: 0.162ms
+[nitro-runtime] render:response: 0.008ms
+[nuxt] [nitro-runtime] beforeResponse: 0.004ms
+[nitro-runtime] dev:ssr-logs: 0.003ms
+[nitro-runtime] afterResponse: 0.136ms
+[nuxt] ℹ ✨ new dependencies optimized: maplibre-gl
+[nuxt] ℹ ✨ optimized dependencies changed. reloading
+[nuxt] [nitro-runtime] request: 0.089ms
+[nuxt] [nitro-runtime] render:before: 0.012ms
+[nuxt] [nuxt-app] app:created: 0.053ms
+[nuxt-app] vue:setup: 0.002ms
+[nuxt] [nuxt-app] app:rendered: 0.049ms
+[nitro-runtime] render:html: 0.469ms
+[nitro-runtime] render:response: 0.006ms
+[nitro-runtime] beforeResponse: 0.003ms
+[nuxt] [nitro-runtime] dev:ssr-logs: 0.003ms
+[nuxt] [nitro-runtime] afterResponse: 0.069ms
+[nuxt] 
+[nuxt]  Nuxt Performance Report
+
+  Phase                       Duration       RSS Delta      Heap Delta
+[nuxt]   ────────────────────────────────────────────────────────────────────
+[nuxt]   init                             3ms       +240.0 KB       +540.0 KB  ██
+[nuxt]   modules                         12ms       +640.0 KB         +2.7 MB  ████
+[nuxt]   modules:done                    24ms       +448.0 KB         +1.1 MB  █████
+[nuxt]   nitro:config                    34ms         +8.3 MB         +9.9 MB  ██████░
+[nuxt]   nitro:createNitro              151ms        +19.2 MB         -4.2 MB  ████████░░
+[nuxt]   ready                            1ms        +48.0 KB       +126.4 KB  █
+[nuxt]   app:generate                    27ms         +6.7 MB         +8.2 MB  ██████░
+[nuxt]   app:templates                    7ms         +1.2 MB         +1.6 MB  ███
+[nuxt]   build:bundle                   184ms        +39.7 MB        +10.4 MB  █████████░░░
+[nuxt]   build:done                       2ms       +672.0 KB       +495.8 KB  ██
+[nuxt]   nitro:build                    402ms       +124.2 MB        +64.4 MB  ██████████░░░░░░░░░░
+[nuxt]   ────────────────────────────────────────────────────────────────────
+[nuxt]   Total                           6.4s       +516.3 MB       +298.1 MB
+
+[nuxt]  Bundler Plugins
+
+[nuxt]   • nitro:node-externals resolveId — 17ms/file, max 162ms (369 calls)
+[nuxt]   • vite:vue transform — 13ms/file, max 100ms (11 calls)
+[nuxt]   • vite:css transform — 5ms/file, max 30ms (14 calls)
+[nuxt]   • vite:optimized-deps load — 2ms/file, max 262ms (228 calls)
+[nuxt]   • vite:client-inject transform — 2ms/file, max 237ms (278 calls)
+[nuxt]   • impound:trace transform — 1ms/file, max 80ms (227 calls)
+[nuxt]   • vite:import-analysis transform — 920µs/file, max 77ms (278 calls)
+[nuxt]   • nuxt:import-protection:impound:trace transform — 910µs/file, max 82ms (278 calls)
+[nuxt]   • nitro:alias resolveId — 700µs/file, max 42ms (557 calls)
+[nuxt] 
+[nuxt]  Details
+[nuxt] 
+[nuxt]   • vite:client — 23ms
+[nuxt]   • vite:server — 26ms
+[nuxt] 
+[nuxt]  Data dump written to ./.nuxt/perf-report.json
+[nuxt]  Trace written to ./.nuxt/perf-trace.json (load in https://ui.perfetto.dev)
+
+
+=== ANGULAR ===
+[angular] 
+> angular-map@0.0.0 start
+> ng serve --port 3003 --host 127.0.0.1
+
+[angular] ❯ Building...
+[angular] ✔ Building...
+[angular] Initial chunk files | Names         | Raw size
+styles.css          | styles        | 72.78 kB | 
+main.js             | main          |  8.66 kB | 
+
+                    | Initial total | 81.44 kB
+
+Application bundle generation complete. [0.858 seconds] - 2026-03-24T23:05:42.131Z
+
+[angular] Watch mode enabled. Watching for file changes...
+[angular] NOTE: Raw file sizes do not reflect development server per-request transformations.
+[angular]   ➜  Local:   http://127.0.0.1:3003/
+
+=== STREAMLIT ===
+[streamlit] 
+[streamlit]   You can now view your Streamlit app in your browser.
+
+  URL: http://127.0.0.1:3004
+
+[streamlit]   Stopping...
+┌─────────┬─────────────┬────────┬─────────────┬────────────────┬─────────────┬────────────────────┬────────────────┐
+│ (index) │ framework   │ status │ mapLoadedMs │ sourceLoadedMs │ firstIdleMs │ interactionMs      │ usedJSHeapSize │
+├─────────┼─────────────┼────────┼─────────────┼────────────────┼─────────────┼────────────────────┼────────────────┤
+│ 0       │ 'next'      │ 'ok'   │ 2507.8      │ 2254.7         │ 5689.9      │ 3172.2999999821186 │ 225000000      │
+│ 1       │ 'nuxt'      │ 'ok'   │ 545.6       │ 105.7          │ 2369.2      │ 1638.800000011921  │ 254000000      │
+│ 2       │ 'angular'   │ 'ok'   │ 465.6       │ 153.4          │ 2224.1      │ 1753.4000000059605 │ 254000000      │
+│ 3       │ 'streamlit' │ 'ok'   │ 1105        │ 1080           │ null        │ null               │ 68000000       │
+└─────────┴─────────────┴────────┴─────────────┴────────────────┴─────────────┴────────────────────┴────────────────┘
