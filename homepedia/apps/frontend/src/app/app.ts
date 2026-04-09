@@ -22,10 +22,15 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
     const mapElement = document.getElementById('leaflet-map');
     if (!mapElement) return;
 
-    this.leafletMap = map(mapElement).setView([47.2184, -1.5536], 13);
+    // OSM public tiles are only published up to zoom 19; higher z returns invalid tiles.
+    this.leafletMap = map(mapElement, { maxZoom: 20 }).setView(
+      [47.2184, -1.5536],
+      13,
+    );
 
     tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      maxZoom: 20,
+      maxNativeZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(this.leafletMap);
   }
