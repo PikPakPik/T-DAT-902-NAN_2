@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "homepedia/villes",
+    "title": "Villes",
+    "description": "1 document par commune — données du scraping de bien-dans-ma-ville.fr",
+    "type": "object",
+    "required": ["code_commune", "nom_commune", "note_moyenne", "notes_criteres"],
+    "properties": {
+      "code_commune": {
+        "type": "string",
+        "description": "Code INSEE de la commune",
+        "example": "84043"
+      },
+      "nom_commune": {
+        "type": "string",
+        "example": "Entraigues-sur-la-Sorgue"
+      },
+      "note_moyenne": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 5
+      },
+      "notes_criteres": {
+        "type": "object",
+        "required": ["securite", "education", "sport_loisir", "environnement", "vie_pratique"],
+        "properties": {
+          "securite":     { "type": "number", "minimum": 0, "maximum": 5 },
+          "education":    { "type": "number", "minimum": 0, "maximum": 5 },
+          "sport_loisir": { "type": "number", "minimum": 0, "maximum": 5 },
+          "environnement":{ "type": "number", "minimum": 0, "maximum": 5 },
+          "vie_pratique": { "type": "number", "minimum": 0, "maximum": 5 }
+        }
+      }
+    }
+  }

@@ -1,0 +1,49 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "homepedia/avis",
+    "title": "Avis",
+    "description": "1 document par avis —  liées à villes via code_commune",
+    "type": "object",
+    "required": ["code_commune", "date", "note_globale", "notes_criteres", "commentaire"],
+    "properties": {
+      "code_commune": {
+        "type": "string",
+        "description": "Référence vers la collection villes",
+        "example": "84043"
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "example": "2023-06-26"
+      },
+      "note_globale": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 5
+      },
+      "notes_criteres": {
+        "type": "object",
+        "properties": {
+          "securite":     { "type": "number", "minimum": 0, "maximum": 5 },
+          "education":    { "type": "number", "minimum": 0, "maximum": 5 },
+          "sport_loisir": { "type": "number", "minimum": 0, "maximum": 5 },
+          "environnement":{ "type": "number", "minimum": 0, "maximum": 5 },
+          "vie_pratique": { "type": "number", "minimum": 0, "maximum": 5 }
+        }
+      },
+      "commentaire": {
+        "type": "string",
+        "example": "Village agréable avec un vrai centre ville dynamique..."
+      },
+      "pouces_haut": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 0
+      },
+      "pouces_bas": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 0
+      }
+    }
+  }
