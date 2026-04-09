@@ -1,21 +1,34 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, inject } from '@angular/core';
 import { Apollo } from 'apollo-angular';
 import { gql } from '@apollo/client/core';
 import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { Map, map, tileLayer } from 'leaflet';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
+  imports: [RouterModule],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App implements OnInit {
+export class App implements OnInit, AfterViewInit, OnDestroy {
   private readonly apollo = inject(Apollo);
+  private leafletMap?: Map;
 
   protected title = 'frontend';
   protected apolloStatus = 'Idle';
   protected apolloResult = '';
+
+  ngAfterViewInit(): void {
+    const mapElement = document.getElementById('leaflet-map');
+    if (!mapElement) return;
+
+    this.leafletMap = map(mapElement).setView([47.2184, -1.5536], 13);
+
+    tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(this.leafletMap);
+  }
 
   ngOnInit(): void {
     this.apolloStatus = 'Loading...';
@@ -39,5 +52,9 @@ export class App implements OnInit {
           this.apolloResult = error.message;
         },
       });
+  }
+
+  ngOnDestroy(): void {
+    this.leafletMap?.remove();
   }
 }

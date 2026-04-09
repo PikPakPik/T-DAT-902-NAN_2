@@ -37,6 +37,7 @@
     "apollo-angular": "^13.0.0",
     "axios": "^1.6.0",
     "graphql": "^16.13.2",
+    "leaflet": "^1.9.4",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0"
   },
@@ -70,6 +71,7 @@
     "@swc/helpers": "~0.5.18",
     "@swc/jest": "~0.2.38",
     "@types/jest": "^30.0.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "20.19.9",
     "@typescript-eslint/utils": "^8.40.0",
     "angular-eslint": "^21.2.0",
