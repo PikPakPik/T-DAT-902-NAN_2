@@ -1,0 +1,34 @@
+services:
+  node:
+    build: ./homepedia/
+    ports:
+      - 4200:4200
+      - 3000:3000
+    volumes:
+      - ./homepedia/:/usr/share/app
+
+  postgis:
+    image: postgis/postgis:18-3.6-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: homepedia
+    volumes:
+      - postgis_data:/var/lib/postgresql
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: homepedia
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  postgis_data: {}
+  mongo_data: {}
