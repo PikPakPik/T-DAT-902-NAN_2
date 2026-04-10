@@ -49,6 +49,10 @@
     "serve": {
       "continuous": true,
       "executor": "@angular/build:dev-server",
+      "options": {
+        "host": "0.0.0.0",
+        "port": 4200
+      },
       "configurations": {
         "production": {
           "buildTarget": "frontend:build:production"
