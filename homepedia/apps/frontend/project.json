@@ -24,6 +24,12 @@
       },
       "configurations": {
         "production": {
+          "fileReplacements": [
+            {
+              "replace": "apps/frontend/src/environments/environment.ts",
+              "with": "apps/frontend/src/environments/environment.prod.ts"
+            }
+          ],
           "budgets": [
             {
               "type": "initial",
@@ -51,7 +57,8 @@
       "executor": "@angular/build:dev-server",
       "options": {
         "host": "0.0.0.0",
-        "port": 4200
+        "port": 4200,
+        "proxyConfig": "apps/frontend/proxy.conf.json"
       },
       "configurations": {
         "production": {
