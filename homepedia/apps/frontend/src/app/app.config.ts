@@ -19,6 +19,9 @@ export const appConfig: ApplicationConfig = {
     providePrimeNG({
       theme: {
         preset: laraIndigoPreset,
+        options: {
+          darkModeSelector: '.dark'
+        },
       },
       ripple: true,
     }),

@@ -5,6 +5,7 @@ import {
   inject,
   OnDestroy,
   OnInit,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
@@ -38,6 +39,12 @@ export class AppComponent implements AfterViewInit, OnDestroy, OnInit {
   apolloStatus = 'Loading...';
   apolloResult = '';
 
+  /** Synced with `<html class="dark">` via `darkModeSelector: '.dark'` in `providePrimeNG`. */
+  readonly isDark = signal(
+    typeof localStorage !== 'undefined' &&
+      localStorage.getItem('homepedia-ui-theme') === 'dark',
+  );
+
   ngAfterViewInit(): void {
       const mapElement = document.getElementById('leaflet-map');
       if (!mapElement) return;
@@ -56,6 +63,8 @@ export class AppComponent implements AfterViewInit, OnDestroy, OnInit {
     }
   
     ngOnInit(): void {
+      this.#syncThemeToDocument();
+
       this.apolloStatus = 'Loading...';
   
       this.#apollo
@@ -88,5 +97,19 @@ export class AppComponent implements AfterViewInit, OnDestroy, OnInit {
 
   onClick() {
     this.msg = 'Welcome ' + this.text;
+  }
+
+  toggleDarkMode(): void {
+    this.isDark.update((v) => !v);
+    this.#syncThemeToDocument();
+  }
+
+  #syncThemeToDocument(): void {
+    const dark = this.isDark();
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('homepedia-ui-theme', dark ? 'dark' : 'light');
+    }
   }
 }
