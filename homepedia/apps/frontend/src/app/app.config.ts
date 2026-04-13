@@ -9,7 +9,7 @@ import { provideRouter } from '@angular/router';
 import { publicGraphqlApolloOptionsFactory } from './config/graphql-public-api.config';
 import { appRoutes } from './app.routes';
 import { providePrimeNG } from 'primeng/config';
-import Aura from '@primeuix/themes/aura';
+import { laraIndigoPreset } from './config/primeng-lara-indigo.preset';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,9 +18,9 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     providePrimeNG({
       theme: {
-        preset: Aura,
+        preset: laraIndigoPreset,
       },
-      ripple: true
+      ripple: true,
     }),
     provideApollo(publicGraphqlApolloOptionsFactory),
     provideRouter(appRoutes),
