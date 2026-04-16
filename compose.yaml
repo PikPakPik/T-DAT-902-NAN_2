@@ -1,6 +1,7 @@
 services:
   postgis:
     image: postgis/postgis:18-3.6-alpine
+    platform: linux/amd64
     ports:
       - 5432:5432
     environment:
@@ -34,8 +35,10 @@ services:
       start_period: 10s
 
   backend:
-    build: ./homepedia/
-    command: sh -c "pnpm install && pnpm run dev:backend"
+    build:
+      context: .
+      dockerfile: .docker/node/Dockerfile
+    command: sh -c "npm install && npm run start:dev"
     ports:
       - 3000:3000
     environment:
@@ -43,7 +46,7 @@ services:
       POSTGRES_URL: postgresql://postgres:postgres@postgis:5432/homepedia
       MONGODB_URL: mongodb://root:example@mongodb:27017/homepedia?authSource=admin
     volumes:
-      - ./homepedia/:/usr/share/app
+      - ./backend/:/usr/share/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 15s
