@@ -1,12 +1,4 @@
 services:
-  node:
-    build: ./homepedia/
-    ports:
-      - 4200:4200
-      - 3000:3000
-    volumes:
-      - ./homepedia/:/usr/share/app
-
   postgis:
     image: postgis/postgis:18-3.6-alpine
     ports:
@@ -17,6 +9,12 @@ services:
       POSTGRES_DB: homepedia
     volumes:
       - postgis_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d homepedia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mongodb:
     image: mongo:latest
@@ -28,6 +26,48 @@ services:
       MONGO_INITDB_DATABASE: homepedia
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build: ./homepedia/
+    command: sh -c "pnpm install && pnpm run dev:backend"
+    ports:
+      - 3000:3000
+    environment:
+      NODE_ENV: development
+      POSTGRES_URL: postgresql://postgres:postgres@postgis:5432/homepedia
+      MONGODB_URL: mongodb://root:example@mongodb:27017/homepedia?authSource=admin
+    volumes:
+      - ./homepedia/:/usr/share/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  frontend:
+    build: ./homepedia/
+    command: sh -c "pnpm install && pnpm run dev:frontend"
+    ports:
+      - 4200:4200
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./homepedia/:/usr/share/app
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgis_data: {}
