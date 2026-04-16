@@ -60,14 +60,14 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./homepedia/
-    command: sh -c "pnpm install && pnpm run dev:frontend"
+    build: .docker/node/Dockerfile
+    command: sh -c "cd frontend && npm install && npm run start"
     ports:
       - 4200:4200
     environment:
       NODE_ENV: development
     volumes:
-      - ./homepedia/:/usr/share/app
+      - ./frontend/:/usr/share/app
     depends_on:
       backend:
         condition: service_healthy
