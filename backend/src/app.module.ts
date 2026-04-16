@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Review, ReviewSchema } from './review/review.schema';
-import { City, CitySchema } from './city/city.schema';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { City, CitySchema } from './city/city.schema';
 import { HealthModule } from './health/health.module';
+import { Review, ReviewSchema } from './review/review.schema';
 
 @Module({
   imports: [
