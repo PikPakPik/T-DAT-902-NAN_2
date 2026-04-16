@@ -21,7 +21,7 @@ import { HealthModule } from './health/health.module';
         __dirname + '/migrations/*{.ts,.js}',
       ],
       synchronize: process.env.NODE_ENV !== 'production',
-      logging: process.env.ENV !== 'production',
+      logging: process.env.NODE_ENV !== 'production',
     }),
     MongooseModule.forRoot(process.env.MONGODB_URL || 'mongodb://root:example@localhost:27017/homepedia?authSource=admin'),
     MongooseModule.forFeature([
