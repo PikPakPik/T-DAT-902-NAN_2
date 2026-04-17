@@ -16,9 +16,9 @@ x-airflow-common:
     AIRFLOW_UID: ${AIRFLOW_UID:-50000}
     BACKEND_HEALTH_URL: ${BACKEND_HEALTH_URL:-http://backend:3000/api/health}
     POSTGIS_HOST: ${POSTGIS_HOST:-postgis}
-    POSTGIS_PORT: ${POSTGIS_PORT:-5432}
+    POSTGIS_PORT: 5432
     MONGODB_HOST: ${MONGODB_HOST:-mongodb}
-    MONGODB_PORT: ${MONGODB_PORT:-27017}
+    MONGODB_PORT: 27017
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
   volumes:
     - ./airflow/dags:/opt/airflow/dags
