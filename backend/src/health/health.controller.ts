@@ -1,6 +1,11 @@
-
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheckService, HttpHealthIndicator, HealthCheck, TypeOrmHealthIndicator, MongooseHealthIndicator } from '@nestjs/terminus';
+import {
+  HealthCheckService,
+  HttpHealthIndicator,
+  HealthCheck,
+  TypeOrmHealthIndicator,
+  MongooseHealthIndicator,
+} from '@nestjs/terminus';
 
 @Controller('health')
 export class HealthController {
@@ -8,7 +13,7 @@ export class HealthController {
     private health: HealthCheckService,
     private http: HttpHealthIndicator,
     private db: TypeOrmHealthIndicator,
-    private mongoose: MongooseHealthIndicator
+    private mongoose: MongooseHealthIndicator,
   ) {}
 
   @Get()
@@ -17,7 +22,7 @@ export class HealthController {
     return this.health.check([
       () => this.http.pingCheck('google', 'https://google.com'),
       () => this.db.pingCheck('database'),
-      () => this.mongoose.pingCheck('mongodb')
+      () => this.mongoose.pingCheck('mongodb'),
     ]);
   }
 }

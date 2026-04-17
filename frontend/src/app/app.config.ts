@@ -6,10 +6,10 @@ import {
 import { provideHttpClient } from '@angular/common/http';
 import { provideApollo } from 'apollo-angular';
 import { provideRouter } from '@angular/router';
-import { publicGraphqlApolloOptionsFactory } from './config/graphql-public-api.config';
+import { publicGraphqlApolloOptionsFactory } from './core/config/graphql-public-api.config';
 import { appRoutes } from './app.routes';
 import { providePrimeNG } from 'primeng/config';
-import { laraIndigoPreset } from './config/primeng-lara-indigo.preset';
+import { laraIndigoPreset } from './core/config/primeng-lara-indigo.preset';
 
 export const appConfig: ApplicationConfig = {
   providers: [

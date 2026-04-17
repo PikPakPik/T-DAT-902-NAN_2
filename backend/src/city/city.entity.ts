@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { Department } from '../department/department.entity';
 import { Section } from '../section/section.entity';
 import { Rent } from '../rent/rent.entity';
@@ -18,7 +24,7 @@ export class City {
   @Column()
   name: string;
 
-  @Column({ type: 'simple-array'})
+  @Column({ type: 'simple-array' })
   names: string[];
 
   @Column()
@@ -30,39 +36,39 @@ export class City {
   @Column()
   epci: string;
 
-  @Column({ type: 'simple-array'})
+  @Column({ type: 'simple-array' })
   zipCodes: string[];
 
   @Column({ type: 'text' })
   wkb: string;
 
   @ManyToOne(() => Department, (department) => department.cities)
-  department: Department
+  department: Department;
 
   @OneToMany(() => Section, (section) => section.city)
-  sections: Section[]
+  sections: Section[];
 
   @OneToMany(() => Rent, (rent) => rent.city)
-  rents: Rent[]
+  rents: Rent[];
 
   @OneToMany(() => Stats, (stat) => stat.city)
-  stats: Stats[]
+  stats: Stats[];
 
   @OneToMany(() => Populate, (populate) => populate.city)
-  populate: Populate[]
+  populate: Populate[];
 
   @OneToMany(() => Income, (income) => income.city)
-  income: Income[]
+  income: Income[];
 
   @OneToMany(() => Crime, (crime) => crime.city)
-  crimes: Crime[]
+  crimes: Crime[];
 
   @OneToMany(() => AirQuality, (airQuality) => airQuality.city)
-  airQualities: AirQuality[]
+  airQualities: AirQuality[];
 
   @OneToMany(() => TransportStop, (transportStop) => transportStop.city)
-  transportStops: TransportStop[]
+  transportStops: TransportStop[];
 
   @OneToMany(() => Device, (device) => device.city)
-  devices: Device[]
+  devices: Device[];
 }

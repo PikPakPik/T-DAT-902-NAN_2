@@ -1,0 +1,23 @@
+<div class="map-page">
+  <div class="graphql-indicator" [attr.data-state]="graphqlStatus()">
+    @if (graphqlStatus() === 'loading') {
+      Test Apollo en cours...
+    } @else if (graphqlStatus() === 'ok') {
+      {{ graphqlInfo() }}
+    } @else if (graphqlStatus() === 'error') {
+      {{ graphqlInfo() }}
+    }
+    @if (graphqlHttpInfo()) {
+      <span class="graphql-http-info">{{ graphqlHttpInfo() }}</span>
+    }
+  </div>
+
+  @if (tokenMissing()) {
+    <div class="mapbox-missing-token">
+      MAPBOX_TOKEN manquant. Renseigne `MAPBOX_TOKEN` dans ton `.env` docker.
+    </div>
+  } @else {
+    <div #map class="map"></div>
+  }
+</div>
+

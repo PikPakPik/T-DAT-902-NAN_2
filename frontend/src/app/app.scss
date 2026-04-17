@@ -1,6 +1,42 @@
-#leaflet-map {
-    height: 400px;
-    width: 100%;
-    margin: 1rem 0;
-  }
-  
+:host {
+  --app-header-height: 56px;
+  display: block;
+  min-height: 100vh;
+}
+
+.app-header {
+  height: var(--app-header-height);
+  padding: 0 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: light-dark(var(--p-surface-0), var(--p-surface-950));
+  border-bottom: 1px solid light-dark(var(--p-surface-200), var(--p-surface-800));
+}
+
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.app-title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.app-main {
+  min-height: calc(100vh - var(--app-header-height));
+}

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { Section } from '../section/section.entity';
 import { Mutation } from '../mutation/mutation.entity';
 import { Dpe } from '../dpe/dpe.entity';
@@ -15,16 +21,16 @@ export class Plot {
   number: string;
 
   @Column()
-  capacity: string
+  capacity: string;
 
   @ManyToOne(() => Section, (section) => section.plots)
-  section: Section
+  section: Section;
 
   @OneToMany(() => Mutation, (mutation) => mutation.plot)
-  mutations: Mutation[]
+  mutations: Mutation[];
 
   @OneToMany(() => Dpe, (dpe) => dpe.plot)
-  dpes: Dpe[]
+  dpes: Dpe[];
 
   getIdentifier(): string {
     const sectionCode = this.section.code.padStart(2, '0');

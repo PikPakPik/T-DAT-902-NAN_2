@@ -36,8 +36,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: .docker/node/Dockerfile
+      context: .docker/node
+      dockerfile: Dockerfile
     command: sh -c "npm install && npm run start:dev"
     ports:
       - 3000:3000
@@ -60,12 +60,15 @@ services:
         condition: service_healthy
 
   frontend:
-    build: .docker/node/Dockerfile
-    command: sh -c "cd frontend && npm install && npm run start"
+    build:
+      context: .docker/node
+      dockerfile: Dockerfile
+    command: sh -c "printf \"window.__env = window.__env || {};\\nwindow.__env.MAPBOX_TOKEN = '%s';\\n\" \"${MAPBOX_TOKEN}\" > public/env.js && npm install && npm run start"
     ports:
       - 4200:4200
     environment:
       NODE_ENV: development
+      MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
     volumes:
       - ./frontend/:/usr/share/app
     depends_on:

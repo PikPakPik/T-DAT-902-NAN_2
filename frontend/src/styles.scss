@@ -1,9 +1,15 @@
 /* You can add global styles to this file, and also import other style files */
 /* You can add global styles to this file, and also import other style files */
-@import 'primeicons/primeicons.css';
-@import 'leaflet/dist/leaflet.css';
+/* 3rd party styles are configured in angular.json (build options -> styles). */
 
 html {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,  Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
   

@@ -7,5 +7,5 @@ export class Mutation {
   id: number;
 
   @ManyToOne(() => Plot, (plot) => plot.mutations)
-  plot: Plot
+  plot: Plot;
 }

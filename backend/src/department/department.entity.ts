@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+} from 'typeorm';
 import { City } from '../city/city.entity';
 import { Region } from '../region/region.entity';
 import { Stats } from './stats.entity';
@@ -21,8 +27,8 @@ export class Department {
   region: Region;
 
   @OneToMany(() => City, (city) => city.department)
-  cities: City[]
+  cities: City[];
 
   @OneToMany(() => Stats, (stat) => stat.department)
-  stats: Stats[]
+  stats: Stats[];
 }

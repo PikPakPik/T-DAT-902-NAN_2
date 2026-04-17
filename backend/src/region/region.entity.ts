@@ -3,19 +3,18 @@ import { Department } from '../department/department.entity';
 
 @Entity({ name: 'regions' })
 export class Region {
-    
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column()
-    name: string;
+  @Column()
+  name: string;
 
-    @Column()
-    code: string;
+  @Column()
+  code: string;
 
-    @Column({ type: 'text' })
-    wkb: string;
+  @Column({ type: 'text' })
+  wkb: string;
 
-    @OneToMany(() => Department, (department) => department.region)
-    departments: Department[]
+  @OneToMany(() => Department, (department) => department.region)
+  departments: Department[];
 }

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { City } from '../city/city.entity';
 import { Plot } from '../plot/plot.entity';
 
@@ -17,10 +23,10 @@ export class Section {
   wkb: string;
 
   @ManyToOne(() => City, (city) => city.sections)
-  city: City
+  city: City;
 
   @OneToMany(() => Plot, (plot) => plot.section)
-  plots: Plot[]
+  plots: Plot[];
 
   getIdentifier(): string {
     const code = this.code.padStart(2, '0');

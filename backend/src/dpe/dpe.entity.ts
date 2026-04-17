@@ -7,7 +7,7 @@ export class Dpe {
   id: number;
 
   @ManyToOne(() => Plot, (plot) => plot.dpes)
-  plot: Plot
+  plot: Plot;
 
   @Column({ type: 'varchar' })
   dpe_id: string;

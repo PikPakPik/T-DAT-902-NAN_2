@@ -1,0 +1,120 @@
+.map-page {
+  height: calc(100vh - var(--app-header-height, 56px));
+  position: relative;
+}
+
+.map {
+  height: 100%;
+  width: 100%;
+}
+
+.graphql-indicator {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
+  padding: 0.35rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.84);
+  color: rgba(241, 245, 249, 0.95);
+  pointer-events: none;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.graphql-indicator[data-state='ok'] {
+  background: rgba(22, 163, 74, 0.9);
+}
+
+.graphql-indicator[data-state='error'] {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+.graphql-http-info {
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.mapbox-missing-token {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  text-align: center;
+  color: light-dark(#0f172a, rgba(226, 232, 240, 0.9));
+  background: light-dark(#f1f5f9, #020617);
+  font-weight: 600;
+}
+
+/* Mapbox controls polish */
+:host ::ng-deep .mapboxgl-ctrl-geocoder {
+  min-width: min(420px, calc(100vw - 2rem));
+  max-width: min(520px, calc(100vw - 2rem));
+  border-radius: 12px;
+  border: 1px solid
+    light-dark(rgba(148, 163, 184, 0.35), rgba(148, 163, 184, 0.25));
+  background: light-dark(rgba(255, 255, 255, 0.92), rgba(2, 6, 23, 0.75));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+:host ::ng-deep .mapboxgl-ctrl-geocoder--input {
+  background: transparent;
+  color: inherit;
+}
+
+:host ::ng-deep .suggestions {
+  border-radius: 12px;
+  border: 1px solid
+    light-dark(rgba(148, 163, 184, 0.35), rgba(148, 163, 184, 0.25));
+  background: light-dark(rgba(255, 255, 255, 0.95), rgba(2, 6, 23, 0.9));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+}
+
+:host ::ng-deep .mapboxgl-ctrl {
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+}
+
+:host ::ng-deep .mapboxgl-ctrl-attrib {
+  background: light-dark(rgba(255, 255, 255, 0.82), rgba(2, 6, 23, 0.72));
+  border-radius: 10px 0 0 0;
+  backdrop-filter: blur(6px);
+}
+
+/* Popups Mapbox : fond Mapbox reste clair alors que le texte hérite du thème sombre */
+:host ::ng-deep .mapboxgl-popup-content {
+  background: light-dark(#fff, rgba(2, 6, 23, 0.96));
+  color: light-dark(#0f172a, rgba(226, 232, 240, 0.95));
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.22);
+}
+
+:host ::ng-deep .mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+:host ::ng-deep .mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+:host ::ng-deep .mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+}
+
+:host ::ng-deep .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+:host ::ng-deep .mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+:host ::ng-deep .mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+}
+
+:host ::ng-deep .mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+}
+
+:host ::ng-deep .mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+}
+
+:host ::ng-deep .mapboxgl-popup-close-button {
+  color: light-dark(#0f172a, rgba(226, 232, 240, 0.9));
+}
+
+:host ::ng-deep .mapboxgl-popup-close-button:hover {
+  background-color: light-dark(#eee, rgba(148, 163, 184, 0.2));
+}
+
