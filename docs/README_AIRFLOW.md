@@ -52,7 +52,7 @@ Relancer le parser de DAGs :
 docker compose restart airflow-dag-processor
 ```
 
-## Depannage rapide
+## Dépannage rapide
 
 - **0 DAG visible** : verifier que le fichier est dans `airflow/dags` et relancer `airflow-dag-processor`.
 - **Erreur env manquante** (`KeyError`) : ajouter la variable dans `.env` ou dans les `environment` Airflow du compose.
