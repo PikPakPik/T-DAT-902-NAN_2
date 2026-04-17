@@ -126,7 +126,7 @@ services:
     restart: always
 
   airflow-redis:
-    image: redis:latest
+    image: ${AIRFLOW_REDIS_IMAGE:-redis:7.2}
     expose:
       - 6379
     healthcheck:
