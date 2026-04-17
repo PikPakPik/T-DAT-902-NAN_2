@@ -1,2 +1,8 @@
 .env*
 !.env.example
+
+# Python
+__pycache__/
+
+# Airflow
+airflow/logs/*

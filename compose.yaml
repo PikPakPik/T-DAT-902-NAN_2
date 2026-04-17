@@ -1,30 +1,65 @@
+x-airflow-common:
+  &airflow-common
+  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.2.0}
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_USER:-airflow}:${AIRFLOW_PASSWORD:-airflow}@airflow-postgres/${AIRFLOW_DATABASE:-airflow}
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql+psycopg2://${AIRFLOW_USER:-airflow}:${AIRFLOW_PASSWORD:-airflow}@airflow-postgres/${AIRFLOW_DATABASE:-airflow}
+    AIRFLOW__CELERY__BROKER_URL: redis://:@airflow-redis:6379/0
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-airflow_jwt_secret}
+    AIRFLOW__API_AUTH__JWT_ISSUER: ${AIRFLOW__API_AUTH__JWT_ISSUER:-airflow}
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    AIRFLOW_UID: ${AIRFLOW_UID:-50000}
+    BACKEND_HEALTH_URL: ${BACKEND_HEALTH_URL:-http://backend:3000/api/health}
+    POSTGIS_HOST: ${POSTGIS_HOST:-postgis}
+    POSTGIS_PORT: ${POSTGIS_PORT:-5432}
+    MONGODB_HOST: ${MONGODB_HOST:-mongodb}
+    MONGODB_PORT: ${MONGODB_PORT:-27017}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/config:/opt/airflow/config
+    - ./airflow/plugins:/opt/airflow/plugins
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    airflow-postgres:
+      condition: service_healthy
+    airflow-redis:
+      condition: service_healthy
+
 services:
   postgis:
-    image: postgis/postgis:18-3.6-alpine
-    platform: linux/amd64
+    image: ${POSTGIS_IMAGE:-postgis/postgis:18-3.6-alpine}
+    platform: ${POSTGIS_PLATFORM:-linux/amd64}
     ports:
-      - 5432:5432
+      - ${POSTGIS_PORT:-5432}:5432
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: homepedia
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-homepedia}
     volumes:
       - postgis_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d homepedia"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-homepedia}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
 
   mongodb:
-    image: mongo:latest
+    image: ${MONGODB_IMAGE:-mongo:latest}
     ports:
-      - 27017:27017
+      - ${MONGODB_PORT:-27017}:27017
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-      MONGO_INITDB_DATABASE: homepedia
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-example}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-homepedia}
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -40,11 +75,11 @@ services:
       dockerfile: Dockerfile
     command: sh -c "npm install && npm run start:dev"
     ports:
-      - 3000:3000
+      - ${BACKEND_PORT:-3000}:3000
     environment:
       NODE_ENV: development
-      POSTGRES_URL: postgresql://postgres:postgres@postgis:5432/homepedia
-      MONGODB_URL: mongodb://root:example@mongodb:27017/homepedia?authSource=admin
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgis:5432/${POSTGRES_DB:-homepedia}
+      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
     volumes:
       - ./backend/:/usr/share/app
     healthcheck:
@@ -65,7 +100,7 @@ services:
       dockerfile: Dockerfile
     command: sh -c "printf \"window.__env = window.__env || {};\\nwindow.__env.MAPBOX_TOKEN = '%s';\\n\" \"${MAPBOX_TOKEN}\" > public/env.js && npm install && npm run start"
     ports:
-      - 4200:4200
+      - ${FRONTEND_PORT:-4200}:4200
     environment:
       NODE_ENV: development
       MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
@@ -75,6 +110,149 @@ services:
       backend:
         condition: service_healthy
 
+  airflow-postgres:
+    image: ${AIRFLOW_POSTGRES_IMAGE:-postgres:16}
+    environment:
+      POSTGRES_USER: ${AIRFLOW_USER:-airflow}
+      POSTGRES_PASSWORD: ${AIRFLOW_PASSWORD:-airflow}
+      POSTGRES_DB: ${AIRFLOW_DATABASE:-airflow}
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${AIRFLOW_USER:-airflow}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-redis:
+    image: redis:latest
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+    restart: always
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - ${AIRFLOW_PORT:-8080}:8080
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    healthcheck:
+      test: ["CMD-SHELL", 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-apiserver:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/{logs,dags,plugins,config}
+        /entrypoint airflow config list >/dev/null
+        chown -R "${AIRFLOW_UID}:0" /opt/airflow
+        ls -la /opt/airflow/{logs,dags,plugins,config}
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+      _PIP_ADDITIONAL_REQUIREMENTS: ""
+    user: "0:0"
+    depends_on:
+      <<: *airflow-common-depends-on
+
+  airflow-cli:
+    <<: *airflow-common
+    profiles:
+      - debug
+    command:
+      - bash
+      - -c
+      - airflow
+    environment:
+      <<: *airflow-common-env
+      CONNECTION_CHECK_MAX_COUNT: "0"
+
 volumes:
   postgis_data: {}
   mongo_data: {}
+  airflow_postgres_data: {}
