@@ -15,6 +15,8 @@ La stack Airflow tourne via `docker compose` avec ces services :
 - `airflow-postgres` : base metadonnees Airflow
 - `airflow-redis` : broker Celery
 
+**Connexion UI / API** : connectez-vous avec `_AIRFLOW_WWW_USER_USERNAME` et `_AIRFLOW_WWW_USER_PASSWORD` definis dans `.env`. Le service `airflow-init` cree ce compte administrateur (FAB) au premier demarrage (`_AIRFLOW_WWW_USER_CREATE`). Ces variables sont obligatoires avant le premier `docker compose up` (voir `compose.yaml`, service `airflow-init`).
+
 Les dossiers montes dans les containers :
 
 - `./airflow/dags` -> `/opt/airflow/dags`
