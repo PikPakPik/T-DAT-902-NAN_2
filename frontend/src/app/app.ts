@@ -1,7 +1,6 @@
 import {
   Component,
   inject,
-  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
@@ -21,30 +20,12 @@ import { ButtonModule } from 'primeng/button';
 export class App {
   #router = inject(Router);
 
-  readonly isDark = signal(
-    typeof localStorage !== 'undefined' &&
-      localStorage.getItem('homepedia-ui-theme') === 'dark',
-  );
-
   constructor() {
-    this.#syncThemeToDocument();
-  }
-
-  toggleDarkMode(): void {
-    this.isDark.update((v) => !v);
-    this.#syncThemeToDocument();
+    document.documentElement.classList.remove('dark');
+    document.documentElement.style.colorScheme = 'light';
   }
 
   navigate(url: string): void {
     void this.#router.navigateByUrl(url);
-  }
-
-  #syncThemeToDocument(): void {
-    const dark = this.isDark();
-    document.documentElement.classList.toggle('dark', dark);
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('homepedia-ui-theme', dark ? 'dark' : 'light');
-    }
   }
 }

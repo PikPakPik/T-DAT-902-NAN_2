@@ -20,7 +20,7 @@ export const appConfig: ApplicationConfig = {
       theme: {
         preset: laraIndigoPreset,
         options: {
-          darkModeSelector: '.dark',
+          darkModeSelector: false,
         },
       },
       ripple: true,

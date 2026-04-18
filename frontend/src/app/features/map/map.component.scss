@@ -43,8 +43,8 @@
   place-items: center;
   padding: 1.25rem;
   text-align: center;
-  color: light-dark(#0f172a, rgba(226, 232, 240, 0.9));
-  background: light-dark(#f1f5f9, #020617);
+  color: #0f172a;
+  background: #f1f5f9;
   font-weight: 600;
 }
 
@@ -53,9 +53,8 @@
   min-width: min(420px, calc(100vw - 2rem));
   max-width: min(520px, calc(100vw - 2rem));
   border-radius: 12px;
-  border: 1px solid
-    light-dark(rgba(148, 163, 184, 0.35), rgba(148, 163, 184, 0.25));
-  background: light-dark(rgba(255, 255, 255, 0.92), rgba(2, 6, 23, 0.75));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(10px);
 }
@@ -67,9 +66,8 @@
 
 :host ::ng-deep .suggestions {
   border-radius: 12px;
-  border: 1px solid
-    light-dark(rgba(148, 163, 184, 0.35), rgba(148, 163, 184, 0.25));
-  background: light-dark(rgba(255, 255, 255, 0.95), rgba(2, 6, 23, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
 }
 
@@ -78,43 +76,41 @@
 }
 
 :host ::ng-deep .mapboxgl-ctrl-attrib {
-  background: light-dark(rgba(255, 255, 255, 0.82), rgba(2, 6, 23, 0.72));
+  background: rgba(255, 255, 255, 0.82);
   border-radius: 10px 0 0 0;
   backdrop-filter: blur(6px);
 }
 
-/* Popups Mapbox : fond Mapbox reste clair alors que le texte hérite du thème sombre */
 :host ::ng-deep .mapboxgl-popup-content {
-  background: light-dark(#fff, rgba(2, 6, 23, 0.96));
-  color: light-dark(#0f172a, rgba(226, 232, 240, 0.95));
+  background: #fff;
+  color: #0f172a;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.22);
 }
 
 :host ::ng-deep .mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
 :host ::ng-deep .mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
 :host ::ng-deep .mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
-  border-bottom-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+  border-bottom-color: #fff;
 }
 
 :host ::ng-deep .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
 :host ::ng-deep .mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
 :host ::ng-deep .mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
-  border-top-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+  border-top-color: #fff;
 }
 
 :host ::ng-deep .mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
-  border-right-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+  border-right-color: #fff;
 }
 
 :host ::ng-deep .mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
-  border-left-color: light-dark(#fff, rgba(2, 6, 23, 0.96));
+  border-left-color: #fff;
 }
 
 :host ::ng-deep .mapboxgl-popup-close-button {
-  color: light-dark(#0f172a, rgba(226, 232, 240, 0.9));
+  color: #0f172a;
 }
 
 :host ::ng-deep .mapboxgl-popup-close-button:hover {
-  background-color: light-dark(#eee, rgba(148, 163, 184, 0.2));
+  background-color: #eee;
 }
-

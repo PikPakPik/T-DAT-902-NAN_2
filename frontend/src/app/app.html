@@ -10,20 +10,6 @@
       />
     </div>
   </div>
-
-  <div class="app-header__right">
-    <p-button
-      type="button"
-      [icon]="isDark() ? 'pi pi-sun' : 'pi pi-moon'"
-      [rounded]="true"
-      [text]="true"
-      severity="secondary"
-      (onClick)="toggleDarkMode()"
-      [attr.aria-label]="
-        isDark() ? 'Passer au thème clair' : 'Passer au thème sombre'
-      "
-    />
-  </div>
 </header>
 
 <main class="app-main">

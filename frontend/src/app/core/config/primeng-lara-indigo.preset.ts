@@ -16,15 +16,6 @@ export const laraIndigoPreset = definePreset(Lara, {
       900: '{indigo.900}',
       950: '{indigo.950}',
     },
-    dark: {
-      primary: {
-        50: '{indigo.950}',
-        100: '{indigo.900}',
-        200: '{indigo.800}',
-        300: '{indigo.700}',
-        400: '{indigo.600}',
-      },
-    },
   },
 });
 
