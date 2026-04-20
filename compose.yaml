@@ -19,6 +19,8 @@ x-airflow-common:
     POSTGIS_PORT: 5432
     MONGODB_HOST: ${MONGODB_HOST:-mongodb}
     MONGODB_PORT: 27017
+    AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGIS_HOST:-postgis}:5432/${POSTGRES_DB:-homepedia}
+    AIRFLOW_CONN_MONGO_DEFAULT: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
   volumes:
     - ./airflow/dags:/opt/airflow/dags

@@ -24,6 +24,25 @@ Les dossiers montes dans les containers :
 - `./airflow/config` -> `/opt/airflow/config`
 - `./airflow/plugins` -> `/opt/airflow/plugins`
 
+## Connexions Airflow preconfigurees
+
+Au demarrage, Airflow cree automatiquement ces connexions via des variables
+d'environnement `AIRFLOW_CONN_*` (definies dans `compose.yaml`) :
+
+- `postgres_default` -> PostGIS (`postgresql://...@postgis:5432/homepedia`)
+- `mongo_default` -> MongoDB (`mongodb://...@mongodb:27017/homepedia?authSource=admin`)
+
+Ces connexions utilisent les identifiants de `.env` :
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
+`MONGO_USERNAME`, `MONGO_PASSWORD`, `MONGO_DATABASE`.
+
+Vous pouvez les verifier avec :
+
+```bash
+docker compose exec airflow-scheduler airflow connections get postgres_default
+docker compose exec airflow-scheduler airflow connections get mongo_default
+```
+
 ## DAG exemple inclus
 
 Fichier : `airflow/dags/homepedia_stack_smoke_dag.py`
