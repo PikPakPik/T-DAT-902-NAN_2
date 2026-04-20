@@ -55,7 +55,7 @@ services:
       start_period: 10s
 
   mongodb:
-    image: ${MONGODB_IMAGE:-mongo:latest}
+    image: ${MONGODB_IMAGE:-mongo:7.0}
     ports:
       - ${MONGODB_PORT:-27017}:27017
     environment:
@@ -65,7 +65,11 @@ services:
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet -u ${MONGO_USERNAME:-root} -p ${MONGO_PASSWORD:-example} --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\" | grep 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
