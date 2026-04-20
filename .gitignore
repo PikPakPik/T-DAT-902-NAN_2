@@ -9,3 +9,6 @@ airflow/logs/*
 
 # Data
 data/raw/*
+
+# AI
+.claude/*
