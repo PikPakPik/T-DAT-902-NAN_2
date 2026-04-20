@@ -55,13 +55,14 @@ services:
       start_period: 10s
 
   mongodb:
-    image: ${MONGODB_IMAGE:-mongo:7.0}
+    image: ${MONGODB_IMAGE:-mongo:8.2}
     ports:
       - ${MONGODB_PORT:-27017}:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-example}
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-homepedia}
+      GLIBC_TUNABLES=glibc.pthread.rseq: 1
     volumes:
       - mongo_data:/data/db
     healthcheck:
