@@ -1,4 +1,10 @@
 <div class="map-page">
+  @if (isLoading()) {
+    <div class="map-loader">
+      <div class="map-loader__spinner"></div>
+      <p class="map-loader__text">Chargement de la carte…</p>
+    </div>
+  }
   <div class="graphql-indicator" [attr.data-state]="graphqlStatus()">
     @if (graphqlStatus() === 'loading') {
       Test Apollo en cours...

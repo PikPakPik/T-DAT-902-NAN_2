@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { MapboxMapFacade } from './mapbox-map.facade';
 import { MapGraphqlSmokeService } from './map-graphql-smoke.service';
 
@@ -13,6 +13,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly graphqlStatus = signal<'idle' | 'loading' | 'ok' | 'error'>('idle');
   readonly graphqlInfo = signal('');
   readonly graphqlHttpInfo = signal('');
+  readonly isLoading = computed(() => this.graphqlStatus() === 'idle' || this.graphqlStatus() === 'loading');
 
   mapElement = viewChild<ElementRef<HTMLDivElement>>('map');
 
