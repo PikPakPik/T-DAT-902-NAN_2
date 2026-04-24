@@ -19,8 +19,8 @@ export class Section {
   @Column()
   code: string;
 
-  @Column({ type: 'text' })
-  wkb: string;
+  @Column({ type: 'geometry', spatialFeatureType: 'MultiPolygon', srid: 4326 })
+  geom: object;
 
   @ManyToOne(() => City, (city) => city.sections)
   city: City;

@@ -20,8 +20,8 @@ export class Department {
   @Column()
   code: string;
 
-  @Column({ type: 'text' })
-  wkb: string;
+  @Column({ type: 'geometry', spatialFeatureType: 'MultiPolygon', srid: 4326 })
+  geom: object;
 
   @ManyToOne(() => Region, (region) => region.departments)
   region: Region;

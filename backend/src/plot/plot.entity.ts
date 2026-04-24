@@ -14,8 +14,8 @@ export class Plot {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'text' })
-  wkb: string;
+  @Column({ type: 'geometry', spatialFeatureType: 'MultiPolygon', srid: 4326 })
+  geom: object;
 
   @Column()
   number: string;

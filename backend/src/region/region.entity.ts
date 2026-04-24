@@ -12,8 +12,8 @@ export class Region {
   @Column()
   code: string;
 
-  @Column({ type: 'text' })
-  wkb: string;
+  @Column({ type: 'geometry', spatialFeatureType: 'MultiPolygon', srid: 4326 })
+  geom: object;
 
   @OneToMany(() => Department, (department) => department.region)
   departments: Department[];

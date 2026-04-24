@@ -39,8 +39,8 @@ export class City {
   @Column({ type: 'simple-array' })
   zipCodes: string[];
 
-  @Column({ type: 'text' })
-  wkb: string;
+  @Column({ type: 'geometry', spatialFeatureType: 'MultiPolygon', srid: 4326 })
+  geom: object;
 
   @ManyToOne(() => Department, (department) => department.cities)
   department: Department;
