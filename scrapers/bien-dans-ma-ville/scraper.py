@@ -1,0 +1,305 @@
+"""
+Scrape avis depuis le sitemap bien-dans-ma-ville.fr et alimente MongoDB
+(collections `cities` et `reviews`, alignées sur les schémas Nest/Mongoose).
+Traite toutes les URLs d'avis listées dans le sitemap.
+
+Usage:
+  MONGODB_URL=mongodb://... python scrape.py
+  python scrape.py --delay-ms=1000 --dry-run
+
+Variables d'environnement: MONGODB_URL, SITEMAP_URL, DELAY_MS, DRY_RUN
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import sys
+import time
+from datetime import datetime
+
+import httpx
+from bs4 import BeautifulSoup
+from pymongo import MongoClient
+
+DEFAULT_SITEMAP = "https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
+CRITERIA_ROW = {
+    "Sécurité": "securite",
+    "Éducation": "education",
+    "Sport / Loisir": "sport_loisir",
+    "Environnement": "environnement",
+    "Vie pratique": "vie_pratique",
+}
+
+CRITERIA_SPAN_TITLE = {
+    "Sécurité": "securite",
+    "Éducation": "education",
+    "Sport / Loisir": "sport_loisir",
+    "Environnement": "environnement",
+    "Vie pratique": "vie_pratique",
+}
+
+
+def fetch_text(client: httpx.Client, url: str) -> str:
+    r = client.get(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xml;q=0.9,*/*;q=0.8",
+        },
+        follow_redirects=True,
+    )
+    r.raise_for_status()
+    return r.text
+
+
+def extract_loc_urls(xml: str) -> list[str]:
+    urls: list[str] = []
+    for m in re.finditer(r"<loc>\s*([^<\s]+)\s*</loc>", xml, re.I):
+        u = m.group(1).strip()
+        if "/avis.html" in u:
+            urls.append(u)
+    return urls
+
+
+def insee_from_avis_url(url: str) -> str | None:
+    m = re.search(r"-(\d{5})/avis\.html(?:\?|$)", url)
+    return m.group(1) if m else None
+
+
+def clamp_rating(n: float) -> float:
+    if n is None or n != n:  # NaN
+        return 0.0
+    return max(0.0, min(5.0, float(n)))
+
+
+def parse_fr_date(s: str) -> datetime | None:
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", s.strip())
+    if not m:
+        return None
+    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    try:
+        return datetime(y, mo, d, 12, 0, 0)
+    except ValueError:
+        return None
+
+
+def parse_city_table(soup: BeautifulSoup) -> dict[str, float]:
+    criteria = {
+        "securite": 0.0,
+        "education": 0.0,
+        "sport_loisir": 0.0,
+        "environnement": 0.0,
+        "vie_pratique": 0.0,
+    }
+    for tr in soup.select("#note table.bloc_chiffre tbody tr"):
+        th = tr.find("th")
+        if not th:
+            continue
+        label = th.get_text(strip=True)
+        key = CRITERIA_ROW.get(label)
+        if not key:
+            continue
+        td = tr.find("td")
+        if not td:
+            continue
+        span = td.find("span")
+        if not span:
+            continue
+        raw = span.get_text(strip=True).replace(",", ".")
+        try:
+            criteria[key] = clamp_rating(float(raw))
+        except ValueError:
+            pass
+    return criteria
+
+
+def parse_average_rating(soup: BeautifulSoup) -> float:
+    el = soup.select_one(".bloc_notemoyenne .total")
+    if not el:
+        return 0.0
+    t = re.sub(r"\s+", "", el.get_text())
+    m = re.match(r"^([\d.,]+)", t)
+    if not m:
+        return 0.0
+    try:
+        return clamp_rating(float(m.group(1).replace(",", ".")))
+    except ValueError:
+        return 0.0
+
+
+def parse_city_name(soup: BeautifulSoup) -> str:
+    main = soup.select_one("#main-content")
+    if main and main.get("data-ville"):
+        return main["data-ville"].strip()
+    h1 = soup.select_one("#entete h1")
+    if not h1:
+        return "Inconnue"
+    text = re.sub(r"\s+", " ", h1.get_text(strip=True))
+    m = re.match(r"^Avis\s+(.+?)\s+(\d{5})\s*$", text, re.I)
+    if m:
+        return m.group(1).strip()
+    return re.sub(r"^Avis\s+", "", text, flags=re.I).strip() or "Inconnue"
+
+
+def parse_reviews(soup: BeautifulSoup, city_code: str) -> list[dict]:
+    out: list[dict] = []
+    for div in soup.select(".commentaires .commentaire"):
+        classes = div.get("class") or []
+        if "bdmv" in classes:
+            continue
+        note_total = div.select_one(".note_total")
+        if not note_total:
+            continue
+        try:
+            overall = clamp_rating(
+                float(note_total.get_text(strip=True).replace(",", "."))
+            )
+        except ValueError:
+            continue
+        spans = div.select(".notes span[title]")
+        if len(spans) < 5:
+            continue
+        criteria_notes: dict[str, float] = {}
+        for sp in spans:
+            title = (sp.get("title") or "").strip()
+            key = CRITERIA_SPAN_TITLE.get(title)
+            if not key:
+                continue
+            try:
+                criteria_notes[key] = clamp_rating(float(int(sp.get_text(strip=True))))
+            except ValueError:
+                continue
+        if len(criteria_notes) < 5:
+            continue
+        date_el = div.select_one(".date")
+        if not date_el:
+            continue
+        dt = parse_fr_date(date_el.get_text())
+        if not dt:
+            continue
+        desc = div.select_one("p.description")
+        if not desc:
+            continue
+        comment = desc.get_text(strip=True)
+        if not comment:
+            continue
+        pouce_spans = div.select(".pouces .pouce span")
+        thumbs_up = 0
+        thumbs_down = 0
+        if len(pouce_spans) >= 1:
+            try:
+                thumbs_up = int(pouce_spans[0].get_text(strip=True))
+            except ValueError:
+                pass
+        if len(pouce_spans) >= 2:
+            try:
+                thumbs_down = int(pouce_spans[1].get_text(strip=True))
+            except ValueError:
+                pass
+        out.append(
+            {
+                "code": city_code,
+                "date": dt,
+                "overall_rating": overall,
+                "criteria_notes": {
+                    "securite": criteria_notes["securite"],
+                    "education": criteria_notes["education"],
+                    "sport_loisir": criteria_notes["sport_loisir"],
+                    "environnement": criteria_notes["environnement"],
+                    "vie_pratique": criteria_notes["vie_pratique"],
+                },
+                "comment": comment,
+                "thumbs_up": thumbs_up,
+                "thumbs_down": thumbs_down,
+            }
+        )
+    return out
+
+
+def parse_city_page(html: str, page_url: str) -> tuple[dict, list[dict]]:
+    soup = BeautifulSoup(html, "html.parser")
+    code = insee_from_avis_url(page_url)
+    if not code:
+        raise ValueError(f"Code INSEE introuvable dans {page_url}")
+    city = {
+        "name": parse_city_name(soup),
+        "code": code,
+        "average_rating": parse_average_rating(soup),
+        "criteria_notes": parse_city_table(soup),
+    }
+    reviews = parse_reviews(soup, code)
+    return city, reviews
+
+
+def main() -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("--delay-ms", type=int, default=800)
+    p.add_argument("--dry-run", action="store_true")
+    args = p.parse_args()
+
+    if os.environ.get("DELAY_MS", "") != "":
+        delay_ms = int(os.environ["DELAY_MS"])
+    else:
+        delay_ms = args.delay_ms
+    dry_run = (
+        os.environ.get("DRY_RUN", "").lower() in ("1", "true")
+        or args.dry_run
+    )
+    sitemap_url = os.environ.get("SITEMAP_URL") or DEFAULT_SITEMAP
+    mongo_url = os.environ.get("MONGODB_URL")
+
+    if not dry_run and not mongo_url:
+        print("MONGODB_URL manquant (ou utilisez --dry-run).", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Sitemap: {sitemap_url}", file=sys.stderr)
+    with httpx.Client(timeout=60.0) as client:
+        xml = fetch_text(client, sitemap_url)
+        urls = extract_loc_urls(xml)
+        print(f"{len(urls)} page(s) avis à traiter.", file=sys.stderr)
+
+        mongo_client: MongoClient | None = None
+        cities_col = reviews_col = None
+        if not dry_run:
+            mongo_client = MongoClient(mongo_url)
+            db = mongo_client.get_database()
+            cities_col = db["cities"]
+            reviews_col = db["reviews"]
+
+        ok = err = 0
+        for i, url in enumerate(urls):
+            try:
+                html = fetch_text(client, url)
+                city, revs = parse_city_page(html, url)
+                if not dry_run and cities_col is not None and reviews_col is not None:
+                    cities_col.replace_one({"code": city["code"]}, city, upsert=True)
+                    reviews_col.delete_many({"code": city["code"]})
+                    if revs:
+                        reviews_col.insert_many(revs)
+                print(
+                    f"[{i + 1}/{len(urls)}] {city['name']} ({city['code']}) — {len(revs)} avis",
+                    file=sys.stderr,
+                )
+                ok += 1
+            except Exception as e:
+                print(f"[{i + 1}/{len(urls)}] ERREUR {url}: {e}", file=sys.stderr)
+                err += 1
+            if i < len(urls) - 1 and delay_ms > 0:
+                time.sleep(delay_ms / 1000.0)
+
+        if mongo_client:
+            mongo_client.close()
+
+    suffix = " (dry-run)" if dry_run else ""
+    print(f"Terminé: {ok} OK, {err} erreur(s).{suffix}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

@@ -259,6 +259,26 @@ services:
       <<: *airflow-common-env
       CONNECTION_CHECK_MAX_COUNT: "0"
 
+  bdmv-scraper:
+    image: python:3.12-slim
+    working_dir: /app
+    profiles:
+      - scrapers
+    environment:
+      MONGODB_URL: mongodb://${username}:${password}@mongodb:27017/${database}?authSource=admin
+      SITEMAP_URL: https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml
+      DELAY_MS: "800"
+      DRY_RUN: "0"
+    volumes:
+      - ./scrapers/bien-dans-ma-ville:/app
+    command:
+      - sh
+      - -c
+      - pip install --no-cache-dir -r requirements.txt && python scraper.py
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
 volumes:
   postgis_data: {}
   mongo_data: {}
