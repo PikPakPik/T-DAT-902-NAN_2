@@ -6,6 +6,8 @@ __pycache__/
 
 # Airflow
 airflow/logs/*
+airflow/data/*
+!airflow/data/.gitkeep
 
 # Data
 data/raw/*
