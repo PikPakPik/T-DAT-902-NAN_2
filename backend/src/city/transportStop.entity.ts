@@ -6,7 +6,7 @@ export class TransportStop {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.transportStops)
   city: City;
 
   @Column({ type: 'varchar' })

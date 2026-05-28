@@ -6,7 +6,7 @@ export class Device {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.devices)
   city: City;
 
   @Column({ type: 'varchar' })

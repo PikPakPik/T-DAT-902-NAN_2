@@ -27,6 +27,6 @@ export class Rent {
   @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
   r2: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.rents)
   city: City;
 }

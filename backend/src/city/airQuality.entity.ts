@@ -6,7 +6,7 @@ export class AirQuality {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.airQualities)
   city: City;
 
   @Column({ type: 'smallint' })

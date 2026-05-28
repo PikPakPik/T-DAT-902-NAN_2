@@ -6,7 +6,7 @@ export class Populate {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.populate)
   city: City;
 
   @Column({ type: 'integer' })

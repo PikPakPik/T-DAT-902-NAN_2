@@ -6,7 +6,7 @@ export class Income {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.income)
   city: City;
 
   @Column({ type: 'smallint' })
