@@ -8,6 +8,14 @@ export class Review {
   @Prop({ required: true })
   code: string;
 
+  /** Slug quartier ; null = avis au niveau commune */
+  @Prop({ type: String, default: null })
+  quartier: string | null;
+
+  /** Identifiant source (attribut data-pouce du site) */
+  @Prop({ type: String, default: null })
+  source_id: string | null;
+
   @Prop({ required: true, type: Date })
   date: Date;
 
@@ -43,3 +51,5 @@ export class Review {
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);
+ReviewSchema.index({ source_id: 1 }, { unique: true, sparse: true });
+ReviewSchema.index({ code: 1, quartier: 1 });

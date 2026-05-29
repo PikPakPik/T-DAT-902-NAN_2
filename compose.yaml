@@ -265,7 +265,7 @@ services:
     profiles:
       - scrapers
     environment:
-      MONGODB_URL: mongodb://${username}:${password}@mongodb:27017/${database}?authSource=admin
+      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
       SITEMAP_URL: https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml
       DELAY_MS: "800"
       DRY_RUN: "0"

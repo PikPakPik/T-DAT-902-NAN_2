@@ -1,11 +1,11 @@
 """
 Scrape avis depuis le sitemap bien-dans-ma-ville.fr et alimente MongoDB
 (collections `cities` et `reviews`, alignées sur les schémas Nest/Mongoose).
-Traite toutes les URLs d'avis listées dans le sitemap.
+Traite communes et quartiers (clé code INSEE + quartier).
 
 Usage:
-  MONGODB_URL=mongodb://... python scrape.py
-  python scrape.py --delay-ms=1000 --dry-run
+  MONGODB_URL=mongodb://... python scraper.py
+  python scraper.py --delay-ms=1000 --dry-run
 
 Variables d'environnement: MONGODB_URL, SITEMAP_URL, DELAY_MS, DRY_RUN
 """
@@ -69,8 +69,18 @@ def extract_loc_urls(xml: str) -> list[str]:
 
 
 def insee_from_avis_url(url: str) -> str | None:
-    m = re.search(r"-(\d{5})/avis\.html(?:\?|$)", url)
+    # Commune : .../ozan-01284/avis.html — Quartier : .../oyonnax-01283/quartier-.../avis.html
+    m = re.search(r"-(\d{5})/", url)
     return m.group(1) if m else None
+
+
+def quartier_slug_from_url(url: str) -> str | None:
+    m = re.search(r"/(quartier-[^/]+)/avis\.html", url, re.I)
+    return m.group(1) if m else None
+
+
+def location_filter(code: str, quartier: str | None) -> dict:
+    return {"code": code, "quartier": quartier}
 
 
 def clamp_rating(n: float) -> float:
@@ -134,7 +144,7 @@ def parse_average_rating(soup: BeautifulSoup) -> float:
         return 0.0
 
 
-def parse_city_name(soup: BeautifulSoup) -> str:
+def parse_commune_name(soup: BeautifulSoup) -> str:
     main = soup.select_one("#main-content")
     if main and main.get("data-ville"):
         return main["data-ville"].strip()
@@ -148,7 +158,30 @@ def parse_city_name(soup: BeautifulSoup) -> str:
     return re.sub(r"^Avis\s+", "", text, flags=re.I).strip() or "Inconnue"
 
 
-def parse_reviews(soup: BeautifulSoup, city_code: str) -> list[dict]:
+def parse_quartier_display_name(soup: BeautifulSoup) -> str | None:
+    for h2 in soup.select("h2"):
+        text = h2.get_text(strip=True)
+        m = re.search(r"sur le quartier\s+(.+?)\s+à\s+", text, re.I)
+        if m:
+            return m.group(1).strip()
+        m = re.search(r"dans le quartier\s+(.+?)\s*\?", text, re.I)
+        if m:
+            return m.group(1).strip()
+    return None
+
+
+def parse_display_name(soup: BeautifulSoup, quartier: str | None) -> str:
+    if quartier:
+        qname = parse_quartier_display_name(soup)
+        if qname:
+            return qname
+        return quartier.replace("-", " ").title()
+    return parse_commune_name(soup)
+
+
+def parse_reviews(
+    soup: BeautifulSoup, city_code: str, quartier: str | None
+) -> list[dict]:
     out: list[dict] = []
     for div in soup.select(".commentaires .commentaire"):
         classes = div.get("class") or []
@@ -157,6 +190,7 @@ def parse_reviews(soup: BeautifulSoup, city_code: str) -> list[dict]:
         note_total = div.select_one(".note_total")
         if not note_total:
             continue
+        source_id = (div.get("data-pouce") or "").strip() or None
         try:
             overall = clamp_rating(
                 float(note_total.get_text(strip=True).replace(",", "."))
@@ -206,6 +240,8 @@ def parse_reviews(soup: BeautifulSoup, city_code: str) -> list[dict]:
         out.append(
             {
                 "code": city_code,
+                "quartier": quartier,
+                "source_id": source_id,
                 "date": dt,
                 "overall_rating": overall,
                 "criteria_notes": {
@@ -228,14 +264,33 @@ def parse_city_page(html: str, page_url: str) -> tuple[dict, list[dict]]:
     code = insee_from_avis_url(page_url)
     if not code:
         raise ValueError(f"Code INSEE introuvable dans {page_url}")
+    quartier = quartier_slug_from_url(page_url)
     city = {
-        "name": parse_city_name(soup),
+        "name": parse_display_name(soup, quartier),
         "code": code,
+        "quartier": quartier,
         "average_rating": parse_average_rating(soup),
         "criteria_notes": parse_city_table(soup),
     }
-    reviews = parse_reviews(soup, code)
+    reviews = parse_reviews(soup, code, quartier)
     return city, reviews
+
+
+def persist_page(
+    cities_col,
+    reviews_col,
+    city: dict,
+    revs: list[dict],
+) -> None:
+    loc = location_filter(city["code"], city["quartier"])
+    cities_col.replace_one(loc, city, upsert=True)
+    reviews_col.delete_many(loc)
+    for r in revs:
+        sid = r.get("source_id")
+        if sid:
+            reviews_col.replace_one({"source_id": sid}, r, upsert=True)
+        else:
+            reviews_col.insert_one(r)
 
 
 def main() -> None:
@@ -272,6 +327,9 @@ def main() -> None:
             db = mongo_client.get_database()
             cities_col = db["cities"]
             reviews_col = db["reviews"]
+            cities_col.create_index([("code", 1), ("quartier", 1)], unique=True)
+            reviews_col.create_index([("source_id", 1)], unique=True, sparse=True)
+            reviews_col.create_index([("code", 1), ("quartier", 1)])
 
         ok = err = 0
         for i, url in enumerate(urls):
@@ -279,12 +337,12 @@ def main() -> None:
                 html = fetch_text(client, url)
                 city, revs = parse_city_page(html, url)
                 if not dry_run and cities_col is not None and reviews_col is not None:
-                    cities_col.replace_one({"code": city["code"]}, city, upsert=True)
-                    reviews_col.delete_many({"code": city["code"]})
-                    if revs:
-                        reviews_col.insert_many(revs)
+                    persist_page(cities_col, reviews_col, city, revs)
+                kind = "quartier" if city["quartier"] else "ville"
+                q = f" / {city['quartier']}" if city["quartier"] else ""
                 print(
-                    f"[{i + 1}/{len(urls)}] {city['name']} ({city['code']}) — {len(revs)} avis",
+                    f"[{i + 1}/{len(urls)}] {city['name']} ({city['code']})"
+                    f" [{kind}{q}] — {len(revs)} avis",
                     file=sys.stderr,
                 )
                 ok += 1

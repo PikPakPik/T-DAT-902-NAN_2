@@ -11,6 +11,10 @@ export class City {
   @Prop({ required: true })
   code: string;
 
+  /** Slug quartier (ex. quartier-plaine-et-forge) ; null = fiche commune entière */
+  @Prop({ type: String, default: null })
+  quartier: string | null;
+
   @Prop({ required: true, min: 0, max: 5 })
   average_rating: number;
 
@@ -34,3 +38,4 @@ export class City {
 }
 
 export const CitySchema = SchemaFactory.createForClass(City);
+CitySchema.index({ code: 1, quartier: 1 }, { unique: true });
