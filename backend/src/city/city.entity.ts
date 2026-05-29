@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { Department } from '../department/department.entity';
 import { Section } from '../section/section.entity';
@@ -16,6 +17,8 @@ import { AirQuality } from './airQuality.entity';
 import { TransportStop } from './transportStop.entity';
 import { Device } from './device.entity';
 
+@Index('idx_cities_geom', ['geom'], { spatial: true })
+@Index('idx_cities_department_id', ['department'])
 @Entity({ name: 'cities' })
 export class City {
   @PrimaryGeneratedColumn()

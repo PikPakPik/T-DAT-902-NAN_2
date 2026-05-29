@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+} from 'typeorm';
 import { City } from './city.entity';
 
+@Index('idx_income_cities_city_id', ['city'])
 @Entity({ name: 'income_cities' })
 export class Income {
   @PrimaryGeneratedColumn()
