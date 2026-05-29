@@ -86,8 +86,7 @@ export class PlotService {
       number: row.number,
       name: row.name,
       geometry: row.geometry,
-      prixMedianM2:
-        row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
+      prixMedianM2: row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
     };
   }
 }

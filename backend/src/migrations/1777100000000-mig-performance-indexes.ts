@@ -94,15 +94,17 @@ export class MigPerformanceIndexes1777100000000 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_dpes_plot_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_mutations_plot_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_devices_city_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_transport_stops_city_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_transport_stops_city_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_air_quality_city_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_crimes_cities_city_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_income_cities_city_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_populate_cities_city_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_rents_city_id"`);
     await queryRunner.query(
-      `DROP INDEX IF EXISTS "idx_stats_cities_city_id"`,
+      `DROP INDEX IF EXISTS "idx_populate_cities_city_id"`,
     );
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_rents_city_id"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_stats_cities_city_id"`);
     await queryRunner.query(
       `DROP INDEX IF EXISTS "idx_stats_departments_department_id"`,
     );

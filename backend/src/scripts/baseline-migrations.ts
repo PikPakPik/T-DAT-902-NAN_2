@@ -48,10 +48,7 @@ async function migrationRecorded(name: string): Promise<boolean> {
   return rows[0]?.exists === true;
 }
 
-async function recordMigration(
-  timestamp: number,
-  name: string,
-): Promise<void> {
+async function recordMigration(timestamp: number, name: string): Promise<void> {
   await AppDataSource.query(
     `INSERT INTO migrations (timestamp, name) VALUES ($1, $2)`,
     [timestamp, name],
@@ -73,10 +70,7 @@ async function main(): Promise<void> {
     const hasGeom = await columnExists('regions', 'geom');
 
     for (const migration of BASELINE_MIGRATIONS) {
-      if (
-        migration.name === 'MigPostgisGeometry1777000000000' &&
-        !hasGeom
-      ) {
+      if (migration.name === 'MigPostgisGeometry1777000000000' && !hasGeom) {
         console.log(
           `Skip ${migration.name} : colonne geom absente (migration PostGIS requise).`,
         );
@@ -92,9 +86,7 @@ async function main(): Promise<void> {
       console.log(`Baselined : ${migration.name}`);
     }
 
-    console.log(
-      '\nHistorique aligné. Lance : npm run typeorm:migration:run',
-    );
+    console.log('\nHistorique aligné. Lance : npm run typeorm:migration:run');
   } finally {
     await AppDataSource.destroy();
   }

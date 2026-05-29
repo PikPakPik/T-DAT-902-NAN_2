@@ -57,8 +57,7 @@ export class CityService {
       name: row.name,
       code: row.code,
       geometry: row.geometry,
-      prixMedianM2:
-        row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
+      prixMedianM2: row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
     }));
   }
 }

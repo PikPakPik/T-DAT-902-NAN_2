@@ -41,12 +41,12 @@ export function buildFetchBounds(
   return expandMapBounds(viewport, paddingRatio);
 }
 
-export type GeoBbox = {
+export interface GeoBbox {
   west: number;
   south: number;
   east: number;
   north: number;
-};
+}
 
 type NestedCoordinates = [number, number] | NestedCoordinates[];
 
