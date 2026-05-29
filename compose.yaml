@@ -260,6 +260,24 @@ services:
       <<: *airflow-common-env
       CONNECTION_CHECK_MAX_COUNT: "0"
 
+  spark:
+    build:
+      context: .
+      dockerfile: .docker/spark/Dockerfile
+    container_name: homepedia-spark
+    environment:
+      - SPARK_MODE=local
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-homepedia}
+    volumes:
+      - ./spark-jobs:/opt/spark-jobs
+    depends_on:
+      postgis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
 volumes:
   postgis_data: {}
   mongo_data: {}
