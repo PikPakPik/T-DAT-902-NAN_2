@@ -4,11 +4,14 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { Section } from '../section/section.entity';
 import { Mutation } from '../mutation/mutation.entity';
 import { Dpe } from '../dpe/dpe.entity';
 
+@Index('idx_plots_geom', ['geom'], { spatial: true })
+@Index('idx_plots_section_id', ['section'])
 @Entity({ name: 'plots' })
 export class Plot {
   @PrimaryGeneratedColumn()

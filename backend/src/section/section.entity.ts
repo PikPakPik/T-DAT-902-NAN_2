@@ -4,10 +4,13 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { City } from '../city/city.entity';
 import { Plot } from '../plot/plot.entity';
 
+@Index('idx_sections_geom', ['geom'], { spatial: true })
+@Index('idx_sections_city_id', ['city'])
 @Entity({ name: 'sections' })
 export class Section {
   @PrimaryGeneratedColumn()

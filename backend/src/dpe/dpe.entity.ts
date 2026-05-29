@@ -1,6 +1,13 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Index,
+} from 'typeorm';
 import { Plot } from '../plot/plot.entity';
 
+@Index('idx_dpes_plot_id', ['plot'])
 @Entity({ name: 'dpes' })
 export class Dpe {
   @PrimaryGeneratedColumn()

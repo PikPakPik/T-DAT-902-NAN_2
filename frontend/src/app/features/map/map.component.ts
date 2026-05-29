@@ -1,6 +1,11 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
-import { MapboxMapFacade } from './mapbox-map.facade';
-import { MapGraphqlSmokeService } from './map-graphql-smoke.service';
+import { MapboxMapFacade } from './core/mapbox-map.facade';
+import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
+import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
+import { MapGraphqlSmokeService } from './services/graphql/map-graphql-smoke.service';
+import { PlotsGraphqlService } from './services/graphql/plots-graphql.service';
+import { RegionsGraphqlService } from './services/graphql/regions-graphql.service';
+import { SectionsGraphqlService } from './services/graphql/sections-graphql.service';
 
 @Component({
   selector: 'map',
@@ -19,9 +24,14 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   #mapFacade?: MapboxMapFacade;
   #graphqlSmoke = inject(MapGraphqlSmokeService);
+  #regionsGraphql = inject(RegionsGraphqlService);
+  #departmentsGraphql = inject(DepartmentsGraphqlService);
+  #citiesGraphql = inject(CitiesGraphqlService);
+  #sectionsGraphql = inject(SectionsGraphqlService);
+  #plotsGraphql = inject(PlotsGraphqlService);
 
   ngAfterViewInit(): void {
-    void this.#runGraphqlSmokeCheck();
+    void this.#bootstrapMap();
 
     const el = this.mapElement()?.nativeElement;
     if (!el) return;
@@ -32,32 +42,57 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.tokenMissing.set(false);
-
-    this.#mapFacade = new MapboxMapFacade(token);
-    this.#mapFacade.init(el);
   }
 
   ngOnDestroy(): void {
     this.#mapFacade?.destroy();
   }
 
-  async #runGraphqlSmokeCheck(): Promise<void> {
+  async #bootstrapMap(): Promise<void> {
     this.graphqlStatus.set('loading');
-    const [apolloResult, rawResult] = await Promise.all([
+
+    const el = this.mapElement()?.nativeElement;
+    const token = window.__env?.MAPBOX_TOKEN ?? '';
+
+    const [apolloResult, rawResult, regionsGeoJson] = await Promise.all([
       this.#graphqlSmoke.check(),
       this.#graphqlSmoke.checkRawHttp(),
+      this.#regionsGraphql.fetchFeatureCollection().catch(() => ({
+        type: 'FeatureCollection' as const,
+        features: [],
+      })),
     ]);
 
     this.graphqlHttpInfo.set(rawResult.info);
 
-    const result = apolloResult;
-    if (result.ok) {
+    if (apolloResult.ok) {
+      const regionCount = regionsGeoJson.features.length;
       this.graphqlStatus.set('ok');
-      this.graphqlInfo.set(`Apollo OK (ping=${result.pingValue ?? 'pong'})`);
-      return;
+      this.graphqlInfo.set(
+        `Apollo OK (ping=${apolloResult.pingValue ?? 'pong'}, régions=${regionCount})`,
+      );
+    } else {
+      this.graphqlStatus.set('error');
+      this.graphqlInfo.set(`Apollo KO: ${apolloResult.error ?? 'unknown error'}`);
     }
 
-    this.graphqlStatus.set('error');
-    this.graphqlInfo.set(`Apollo KO: ${result.error ?? 'unknown error'}`);
+    if (!el || !token) return;
+
+    this.#mapFacade?.destroy();
+    this.#mapFacade = new MapboxMapFacade(
+      token,
+      regionsGeoJson,
+      (bounds) => this.#departmentsGraphql.fetchFeatureCollection(bounds),
+      (bounds) => this.#citiesGraphql.fetchFeatureCollection(bounds),
+      (bounds, cityId) =>
+        cityId != null
+          ? this.#sectionsGraphql.fetchByCityId(cityId)
+          : this.#sectionsGraphql.fetchFeatureCollection(bounds),
+      (bounds, sectionId) =>
+        sectionId != null
+          ? this.#plotsGraphql.fetchBySectionId(sectionId)
+          : this.#plotsGraphql.fetchFeatureCollection(bounds),
+    );
+    this.#mapFacade.init(el);
   }
 }
