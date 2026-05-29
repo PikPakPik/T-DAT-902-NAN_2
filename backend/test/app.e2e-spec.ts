@@ -16,6 +16,10 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
+  afterEach(async () => {
+    await app.close();
+  });
+
   it('/ (GET)', () => {
     return request(app.getHttpServer())
       .get('/')
@@ -23,7 +27,32 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
-  afterEach(async () => {
-    await app.close();
+  it('/health (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/health')
+      .expect(200)
+      .expect((res) => {
+        const body = res.body as {
+          status: string;
+          info: {
+            database: { status: string };
+            mongodb: { status: string };
+          };
+        };
+        expect(body.status).toBe('ok');
+        expect(body.info.database.status).toBe('up');
+        expect(body.info.mongodb.status).toBe('up');
+      });
+  });
+
+  it('GraphQL ping', () => {
+    return request(app.getHttpServer())
+      .post('/graphql')
+      .send({ query: '{ ping }' })
+      .expect(200)
+      .expect((res) => {
+        const body = res.body as { data: { ping: string } };
+        expect(body.data.ping).toBe('pong');
+      });
   });
 });
