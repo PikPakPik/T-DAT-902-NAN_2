@@ -5,7 +5,10 @@
       <p class="map-loader__text">Chargement de la carte…</p>
     </div>
   }
-  <div class="graphql-indicator" [attr.data-state]="graphqlStatus()">
+  <div
+    class="graphql-indicator"
+    [attr.data-state]="graphqlStatus()"
+  >
     @if (graphqlStatus() === 'loading') {
       Test Apollo en cours...
     } @else if (graphqlStatus() === 'ok') {
@@ -23,7 +26,7 @@
       MAPBOX_TOKEN manquant. Renseigne `MAPBOX_TOKEN` dans ton `.env` docker.
     </div>
   } @else {
-    <div #map class="map"></div>
+    <div #map class="map" data-tour="map-view"></div>
   }
 </div>
 

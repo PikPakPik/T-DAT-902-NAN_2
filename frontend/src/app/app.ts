@@ -5,6 +5,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { OnboardingTourService } from './core/onboarding/onboarding-tour.service';
 
 @Component({
   selector: 'app-root',
@@ -19,6 +20,7 @@ import { ButtonModule } from 'primeng/button';
 })
 export class App {
   #router = inject(Router);
+  #onboardingTour = inject(OnboardingTourService);
 
   constructor() {
     document.documentElement.classList.remove('dark');
@@ -27,5 +29,9 @@ export class App {
 
   navigate(url: string): void {
     void this.#router.navigateByUrl(url);
+  }
+
+  startOnboardingTour(): void {
+    this.#onboardingTour.start({ force: true });
   }
 }

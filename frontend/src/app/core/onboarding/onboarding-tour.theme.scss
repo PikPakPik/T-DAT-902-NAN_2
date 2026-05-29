@@ -1,0 +1,113 @@
+.shepherd-element {
+  z-index: 11000;
+  max-width: min(420px, calc(100vw - 2rem));
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
+}
+
+.shepherd-element.shepherd-centered {
+  transform: none;
+}
+
+.shepherd-content {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.shepherd-has-title .shepherd-content .shepherd-header {
+  background: #4f46e5;
+  padding: 0.85rem 1rem;
+  line-height: 1.35;
+}
+
+.shepherd-has-title .shepherd-content .shepherd-header .shepherd-title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.shepherd-text {
+  color: #0f172a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.85rem 1rem;
+}
+
+.shepherd-text .shepherd-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.shepherd-text .shepherd-list li + li {
+  margin-top: 0.25rem;
+}
+
+.shepherd-footer {
+  padding: 0.65rem 1rem 0.85rem;
+  gap: 0.35rem;
+}
+
+.shepherd-button {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  margin-right: 0.35rem;
+}
+
+.shepherd-button:not(.shepherd-button-secondary) {
+  background: #4f46e5;
+  color: #fff;
+}
+
+.shepherd-button:not(.shepherd-button-secondary):not(:disabled):hover {
+  background: #4338ca;
+  color: #fff;
+}
+
+.shepherd-button-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.shepherd-button-secondary:not(:disabled):hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.shepherd-has-title .shepherd-content .shepherd-cancel-icon {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.shepherd-has-title .shepherd-content .shepherd-cancel-icon:hover {
+  color: #fff;
+}
+
+.shepherd-arrow::before {
+  background: #fff;
+}
+
+.shepherd-element.shepherd-has-title[data-popper-placement^='bottom'] > .shepherd-arrow::before {
+  background: #4f46e5;
+}
+
+.shepherd-element.shepherd-has-title[data-popper-placement^='top'] > .shepherd-arrow::before {
+  background: #fff;
+}
+
+.shepherd-modal-overlay-container {
+  z-index: 10900;
+}
+
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  opacity: 0.45;
+}
+
+body.homepedia-tour-active .map-loader {
+  display: none;
+}
+
+body.homepedia-tour-active .graphql-indicator {
+  z-index: 10850;
+}

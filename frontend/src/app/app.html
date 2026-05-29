@@ -1,14 +1,26 @@
 <header class="app-header">
   <div class="app-header__left">
-    <span class="app-title">Homepedia</span>
+    <span class="app-title" data-tour="app-title">Homepedia</span>
     <div class="app-nav">
-      <p-button
-        label="Carte"
-        icon="pi pi-map"
-        [text]="true"
-        (onClick)="navigate('/')"
-      />
+      <span data-tour="nav-map">
+        <p-button
+          label="Carte"
+          icon="pi pi-map"
+          [text]="true"
+          (onClick)="navigate('/')"
+        />
+      </span>
     </div>
+  </div>
+  <div class="app-header__right">
+    <span data-tour="tour-help">
+      <p-button
+        label="Guide"
+        icon="pi pi-question-circle"
+        [text]="true"
+        (onClick)="startOnboardingTour()"
+      />
+    </span>
   </div>
 </header>
 

@@ -34,6 +34,8 @@
               "node_modules/primeicons/primeicons.css",
               "node_modules/mapbox-gl/dist/mapbox-gl.css",
               "node_modules/@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css",
+              "node_modules/shepherd.js/dist/css/shepherd.css",
+              "src/app/core/onboarding/onboarding-tour.theme.scss",
               "src/styles.scss"
             ]
           },

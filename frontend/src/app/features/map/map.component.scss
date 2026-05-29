@@ -3,6 +3,14 @@
   position: relative;
 }
 
+:host-context(body.homepedia-tour-active) .map-loader {
+  display: none;
+}
+
+:host-context(body.homepedia-tour-active) .graphql-indicator {
+  z-index: 10850;
+}
+
 .map-loader {
   position: absolute;
   inset: 0;

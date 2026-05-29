@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import { OnboardingTourService } from '../../core/onboarding/onboarding-tour.service';
 import { MapboxMapFacade } from './core/mapbox-map.facade';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
 import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
@@ -29,6 +30,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   #citiesGraphql = inject(CitiesGraphqlService);
   #sectionsGraphql = inject(SectionsGraphqlService);
   #plotsGraphql = inject(PlotsGraphqlService);
+  #onboardingTour = inject(OnboardingTourService);
 
   ngAfterViewInit(): void {
     void this.#bootstrapMap();
@@ -94,5 +96,12 @@ export class MapComponent implements AfterViewInit, OnDestroy {
           : this.#plotsGraphql.fetchFeatureCollection(bounds),
     );
     this.#mapFacade.init(el);
+    this.#scheduleOnboardingTour();
+  }
+
+  #scheduleOnboardingTour(): void {
+    requestAnimationFrame(() => {
+      this.#onboardingTour.start();
+    });
   }
 }
