@@ -73,10 +73,12 @@ def extract_loc_urls(xml: str) -> list[str]:
     return urls
 
 
+_INSEE_IN_URL = re.compile(r"-((?:\d{5}|2[AB]\d{3}))/", re.I)
+
+
 def insee_from_avis_url(url: str) -> str | None:
-    # Commune : .../ozan-01284/avis.html — Quartier : .../oyonnax-01283/quartier-.../avis.html
-    m = re.search(r"-(\d{5})/", url)
-    return m.group(1) if m else None
+    m = _INSEE_IN_URL.search(url)
+    return m.group(1).upper() if m else None
 
 
 def quartier_slug_from_url(url: str) -> str | None:
