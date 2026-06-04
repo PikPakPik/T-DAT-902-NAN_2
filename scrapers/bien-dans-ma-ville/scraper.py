@@ -3,11 +3,11 @@ Scrape avis depuis le sitemap bien-dans-ma-ville.fr et alimente MongoDB
 (collections `cities` et `reviews`, alignées sur les schémas Nest/Mongoose).
 Traite communes et quartiers (clé code INSEE + quartier).
 
-Usage:
-  MONGODB_URL=mongodb://... python scraper.py
-  python scraper.py --delay-ms=1000 --dry-run
+Usage (Windows: `py` si `python` est introuvable):
+  py scraper.py --dry-run
+  $env:MONGODB_URL="mongodb://..."; py scraper.py --delay-ms=1000 --workers=8
 
-Variables d'environnement: MONGODB_URL, SITEMAP_URL, DELAY_MS, DRY_RUN
+Variables d'environnement: MONGODB_URL, SITEMAP_URL, DELAY_MS, DRY_RUN, WORKERS
 """
 
 from __future__ import annotations
@@ -16,7 +16,9 @@ import argparse
 import os
 import re
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 import httpx
@@ -24,6 +26,9 @@ from bs4 import BeautifulSoup
 from pymongo import MongoClient
 
 DEFAULT_SITEMAP = "https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml"
+DEFAULT_WORKERS = 8
+
+_thread_local = threading.local()
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -259,6 +264,43 @@ def parse_reviews(
     return out
 
 
+def _worker_init() -> None:
+    _thread_local.client = httpx.Client(timeout=60.0)
+
+
+def _http_client() -> httpx.Client:
+    client = getattr(_thread_local, "client", None)
+    if client is None:
+        client = httpx.Client(timeout=60.0)
+        _thread_local.client = client
+    return client
+
+
+def process_url(
+    url: str,
+    *,
+    dry_run: bool,
+    cities_col,
+    reviews_col,
+    delay_ms: int,
+) -> tuple[bool, str]:
+    if delay_ms > 0:
+        time.sleep(delay_ms / 1000.0)
+    try:
+        html = fetch_text(_http_client(), url)
+        city, revs = parse_city_page(html, url)
+        if not dry_run and cities_col is not None and reviews_col is not None:
+            persist_page(cities_col, reviews_col, city, revs)
+        kind = "quartier" if city["quartier"] else "ville"
+        q = f" / {city['quartier']}" if city["quartier"] else ""
+        return (
+            True,
+            f"{city['name']} ({city['code']}) [{kind}{q}] — {len(revs)} avis",
+        )
+    except Exception as e:
+        return False, f"ERREUR {url}: {e}"
+
+
 def parse_city_page(html: str, page_url: str) -> tuple[dict, list[dict]]:
     soup = BeautifulSoup(html, "html.parser")
     code = insee_from_avis_url(page_url)
@@ -296,6 +338,7 @@ def persist_page(
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--delay-ms", type=int, default=800)
+    p.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
 
@@ -303,6 +346,13 @@ def main() -> None:
         delay_ms = int(os.environ["DELAY_MS"])
     else:
         delay_ms = args.delay_ms
+    if os.environ.get("WORKERS", "") != "":
+        workers = int(os.environ["WORKERS"])
+    else:
+        workers = args.workers
+    if workers < 1:
+        print("--workers doit être >= 1.", file=sys.stderr)
+        sys.exit(1)
     dry_run = (
         os.environ.get("DRY_RUN", "").lower() in ("1", "true")
         or args.dry_run
@@ -318,7 +368,11 @@ def main() -> None:
     with httpx.Client(timeout=60.0) as client:
         xml = fetch_text(client, sitemap_url)
         urls = extract_loc_urls(xml)
-        print(f"{len(urls)} page(s) avis à traiter.", file=sys.stderr)
+        total = len(urls)
+        print(
+            f"{total} page(s) avis à traiter ({workers} worker(s)).",
+            file=sys.stderr,
+        )
 
         mongo_client: MongoClient | None = None
         cities_col = reviews_col = None
@@ -331,26 +385,35 @@ def main() -> None:
             reviews_col.create_index([("source_id", 1)], unique=True, sparse=True)
             reviews_col.create_index([("code", 1), ("quartier", 1)])
 
+        per_worker_delay = delay_ms // max(workers, 1) if delay_ms > 0 else 0
         ok = err = 0
-        for i, url in enumerate(urls):
-            try:
-                html = fetch_text(client, url)
-                city, revs = parse_city_page(html, url)
-                if not dry_run and cities_col is not None and reviews_col is not None:
-                    persist_page(cities_col, reviews_col, city, revs)
-                kind = "quartier" if city["quartier"] else "ville"
-                q = f" / {city['quartier']}" if city["quartier"] else ""
-                print(
-                    f"[{i + 1}/{len(urls)}] {city['name']} ({city['code']})"
-                    f" [{kind}{q}] — {len(revs)} avis",
-                    file=sys.stderr,
-                )
-                ok += 1
-            except Exception as e:
-                print(f"[{i + 1}/{len(urls)}] ERREUR {url}: {e}", file=sys.stderr)
-                err += 1
-            if i < len(urls) - 1 and delay_ms > 0:
-                time.sleep(delay_ms / 1000.0)
+        done = 0
+        stats_lock = threading.Lock()
+
+        with ThreadPoolExecutor(
+            max_workers=workers, initializer=_worker_init
+        ) as executor:
+            futures = {
+                executor.submit(
+                    process_url,
+                    url,
+                    dry_run=dry_run,
+                    cities_col=cities_col,
+                    reviews_col=reviews_col,
+                    delay_ms=per_worker_delay,
+                ): url
+                for url in urls
+            }
+            for fut in as_completed(futures):
+                success, msg = fut.result()
+                with stats_lock:
+                    done += 1
+                    n = done
+                    if success:
+                        ok += 1
+                    else:
+                        err += 1
+                print(f"[{n}/{total}] {msg}", file=sys.stderr)
 
         if mongo_client:
             mongo_client.close()
