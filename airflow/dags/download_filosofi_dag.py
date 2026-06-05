@@ -11,36 +11,11 @@ from urllib.request import Request, urlopen
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+from download_utils import USER_AGENT, download_to_path
 
-# Dataset INSEE 7756729 : "Revenus et pauvrete des menages en 2021 - Tous les
-# niveaux geographiques" (dispositif Filosofi, Fichier localise social et fiscal).
-# Les fichiers couvrent tous les echelons, du national a la commune (region,
-# departement, arrondissement, EPCI, commune...). INSEE diffuse les CSV dans des
-# ZIP, un par millesime geographique. On ne code pas les noms de fichiers en dur :
-# on lit la page et on recupere dynamiquement tous les liens de telechargement CSV
-# (les versions XLSX, presentes sur la meme page, sont ignorees).
 PAGE_URL = "https://www.insee.fr/fr/statistiques/7756729"
 SITE_ROOT = "https://www.insee.fr"
-USER_AGENT = "airflow-homepedia"
-
-# Repertoire de destination dans le container. Monte ./airflow/data:/opt/airflow/data
-# dans compose.yaml pour persister les fichiers sur l'hote.
 DOWNLOAD_DIR = os.environ.get("FILOSOFI_DOWNLOAD_DIR", "/opt/airflow/data/filosofi")
-
-
-def _download(url: str, target: str) -> None:
-    tmp = f"{target}.part"
-    request = Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urlopen(request, timeout=600) as response, open(tmp, "wb") as fh:
-            if response.getcode() != 200:
-                raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
-            shutil.copyfileobj(response, fh)
-    except URLError as exc:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
-    os.replace(tmp, target)
 
 
 def _discover_csv_zip_urls() -> list[str]:
@@ -95,9 +70,7 @@ def download_filosofi() -> None:
         os.makedirs(dest_dir, exist_ok=True)
 
         zip_target = os.path.join(dest_dir, filename)
-        _download(url, zip_target)
-        size_mb = os.path.getsize(zip_target) / (1024 * 1024)
-        print(f"Downloaded {url} -> {zip_target} ({size_mb:.2f} MB)")
+        download_to_path(url, zip_target, timeout=600)
 
         extracted = _extract_csv(zip_target, dest_dir)
         os.remove(zip_target)
