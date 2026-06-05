@@ -29,8 +29,8 @@ import { Review, ReviewSchema } from './review/review.schema';
         'postgresql://postgres:postgres@localhost:5432/homepedia',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production',
-      logging: process.env.NODE_ENV !== 'production',
+      synchronize: process.env.NODE_ENV === 'development',
+      logging: process.env.NODE_ENV === 'development',
     }),
     TypeOrmModule.forFeature([CityEntity]),
     MongooseModule.forRoot(
