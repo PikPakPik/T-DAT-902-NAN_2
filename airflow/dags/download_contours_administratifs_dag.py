@@ -9,23 +9,19 @@ Schedule : mensuel
 """
  
 from __future__ import annotations
- 
+
 import os
-import shutil
 from datetime import datetime, timedelta
-from urllib.error import URLError
-from urllib.request import Request, urlopen
- 
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
- 
-# Import du loader (doit être dans le PYTHONPATH du container Airflow)
-# Placez load_contours.py dans /opt/airflow/dags/ ou un dossier plugins/
+
+from download_utils import download_to_path
 from load_contours import load_all_contours
- 
+
 BASE_URL     = "https://adresse.data.gouv.fr/data/contours-administratifs/latest/geojson"
 DOWNLOAD_DIR = os.environ.get("GEOJSON_DOWNLOAD_DIR", "/opt/airflow/data/geojson")
- 
+
 FILES = [
     "communes-5m.geojson.gz",
     "communes-associees-deleguees-5m.geojson.gz",
@@ -34,32 +30,12 @@ FILES = [
     "mairies.geojson.gz",
     "regions-5m.geojson.gz",
 ]
- 
- 
-# ---------------------------------------------------------------------------
-# Fonctions existantes (inchangées)
-# ---------------------------------------------------------------------------
- 
+
+
 def download_geojson(filename: str) -> None:
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    url    = f"{BASE_URL}/{filename}"
+    url = f"{BASE_URL}/{filename}"
     target = os.path.join(DOWNLOAD_DIR, filename)
-    tmp    = f"{target}.part"
- 
-    request = Request(url, headers={"User-Agent": "airflow-homepedia"})
-    try:
-        with urlopen(request, timeout=300) as response, open(tmp, "wb") as fh:
-            if response.getcode() != 200:
-                raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
-            shutil.copyfileobj(response, fh)
-    except URLError as exc:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
- 
-    os.replace(tmp, target)
-    size_mb = os.path.getsize(target) / (1024 * 1024)
-    print(f"Downloaded {url} -> {target} ({size_mb:.2f} MB)")
+    download_to_path(url, target, timeout=600)
  
  
 def report_downloads() -> None:
