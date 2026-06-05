@@ -3,10 +3,10 @@ import * as mapboxgl from 'mapbox-gl';
 /** Coordonnées imbriquées Polygon / MultiPolygon GeoJSON */
 export type NestedCoordinates = [number, number] | NestedCoordinates[];
 
-/** Centre du bbox englobant un Polygon / MultiPolygon (popup, etc.). */
-export function getPolygonFeatureCenter(
+/** Bbox englobant un Polygon / MultiPolygon GeoJSON. */
+export function getPolygonFeatureBounds(
   feature: mapboxgl.GeoJSONFeature,
-): mapboxgl.LngLatLike | null {
+): mapboxgl.LngLatBounds | null {
   const geometry = feature.geometry;
 
   const expandBounds = (
@@ -37,9 +37,12 @@ export function getPolygonFeatureCenter(
     return null;
   }
 
-  if (!bounds.isEmpty()) {
-    return bounds.getCenter();
-  }
+  return bounds.isEmpty() ? null : bounds;
+}
 
-  return null;
+/** Centre du bbox englobant un Polygon / MultiPolygon (popup, etc.). */
+export function getPolygonFeatureCenter(
+  feature: mapboxgl.GeoJSONFeature,
+): mapboxgl.LngLatLike | null {
+  return getPolygonFeatureBounds(feature)?.getCenter() ?? null;
 }

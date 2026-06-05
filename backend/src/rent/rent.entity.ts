@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+} from 'typeorm';
 import { City } from '../city/city.entity';
 
+@Index('idx_rents_city_id', ['city'])
 @Entity({ name: 'rents' })
 export class Rent {
   @PrimaryGeneratedColumn()
@@ -27,6 +34,6 @@ export class Rent {
   @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
   r2: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.rents)
   city: City;
 }

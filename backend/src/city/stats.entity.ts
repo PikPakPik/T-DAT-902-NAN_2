@@ -1,12 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+} from 'typeorm';
 import { City } from './city.entity';
 
+@Index('idx_stats_cities_city_id', ['city'])
 @Entity({ name: 'stats_cities' })
 export class Stats {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.stats)
   city: City;
 
   @Column({ type: 'smallint' })

@@ -1,12 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+} from 'typeorm';
 import { City } from './city.entity';
 
+@Index('idx_air_quality_city_id', ['city'])
 @Entity({ name: 'air_quality' })
 export class AirQuality {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => City, (city) => city.id)
+  @ManyToOne(() => City, (city) => city.airQualities)
   city: City;
 
   @Column({ type: 'smallint' })

@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Department } from '../department/department.entity';
 
+@Index('idx_regions_geom', ['geom'], { spatial: true })
 @Entity({ name: 'regions' })
 export class Region {
   @PrimaryGeneratedColumn()

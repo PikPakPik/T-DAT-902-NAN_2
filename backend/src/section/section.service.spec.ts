@@ -1,0 +1,71 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { parisBounds } from '../test/map-bounds.fixture';
+import { Section } from './section.entity';
+import { SectionService } from './section.service';
+
+describe('SectionService', () => {
+  let service: SectionService;
+  let query: jest.Mock;
+
+  beforeEach(async () => {
+    query = jest.fn();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SectionService,
+        {
+          provide: getRepositoryToken(Section),
+          useValue: { query },
+        },
+      ],
+    }).compile();
+
+    service = module.get(SectionService);
+  });
+
+  const sampleRow = {
+    id: 10,
+    code: '1',
+    prefixe: '0',
+    name: '750560001',
+    geometry: '{"type":"MultiPolygon","coordinates":[]}',
+    prixMedianM2: '9200.00',
+  };
+
+  it('findInBounds maps sections cadastrales', async () => {
+    query.mockResolvedValue([sampleRow]);
+
+    const sections = await service.findInBounds(parisBounds);
+
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('sections s'), [
+      parisBounds.topLeftLng,
+      parisBounds.bottomRightLat,
+      parisBounds.bottomRightLng,
+      parisBounds.topLeftLat,
+    ]);
+    expect(sections).toEqual([
+      {
+        id: 10,
+        code: '1',
+        prefixe: '0',
+        name: '750560001',
+        geometry: '{"type":"MultiPolygon","coordinates":[]}',
+        prixMedianM2: 9200,
+      },
+    ]);
+  });
+
+  it('findByCityId filters by cityId', async () => {
+    query.mockResolvedValue([sampleRow]);
+
+    const sections = await service.findByCityId(75056);
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('s."cityId" = $1'),
+      [75056],
+    );
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.name).toBe('750560001');
+  });
+});

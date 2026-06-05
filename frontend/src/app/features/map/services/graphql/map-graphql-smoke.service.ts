@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Apollo, gql } from 'apollo-angular';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../../../environments/environment';
 
 interface PingQueryResponse {
   ping?: string;
