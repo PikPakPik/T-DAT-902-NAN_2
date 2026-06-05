@@ -26,8 +26,7 @@ x-airflow-common:
     MONGODB_PORT: ${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}
     AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGIS_HOST:-postgis}:${POSTGIS_PORT:-${POSTGIS_PUBLISH_PORT:-5432}}/${POSTGRES_DB:-homepedia}
     AIRFLOW_CONN_MONGO_DEFAULT: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-ijson}
-    MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
+    MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
     SCRAPERS_DIR: /opt/airflow/scrapers
     SITEMAP_URL: ${SITEMAP_URL:-https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml}
     DELAY_MS: ${SCRAPER_DELAY_MS:-800}
@@ -37,6 +36,7 @@ x-airflow-common:
     SENTIMENT_TORCH_THREADS: ${SENTIMENT_TORCH_THREADS:-0}
     SENTIMENT_MODEL: ${SENTIMENT_MODEL:-nlptown/bert-base-multilingual-uncased-sentiment}
     WORDCLOUD_METHOD: ${WORDCLOUD_METHOD:-count}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-pymongo>=4.8.0,ijson}
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
@@ -285,8 +285,6 @@ services:
       - scrapers
     environment:
       MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
-      WORKERS: ${SCRAPER_WORKERS:-8}
-      DELAY_MS: ${SCRAPER_DELAY_MS:-800}
       SITEMAP_URL: ${SITEMAP_URL:-https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml}
       DRY_RUN: "0"
     volumes:
@@ -302,7 +300,7 @@ services:
     profiles:
       - scrapers
     environment:
-      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
+      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
       SENTIMENT_BATCH_SIZE: ${SENTIMENT_BATCH_SIZE:-64}
       SENTIMENT_MAX_LENGTH: ${SENTIMENT_MAX_LENGTH:-256}
       SENTIMENT_TORCH_THREADS: ${SENTIMENT_TORCH_THREADS:-0}
