@@ -42,10 +42,8 @@ export class PlotService {
       FROM plots p
       INNER JOIN sections s ON s.id = p."sectionId"
       INNER JOIN cities c ON c.id = s."cityId"
-      WHERE ST_Intersects(
-        p.geom,
-        ST_MakeEnvelope($1, $2, $3, $4, 4326)
-      )
+      WHERE p.geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+        AND ST_Intersects(p.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326))
       ORDER BY name
     `,
       [west, south, east, north],
