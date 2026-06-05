@@ -27,6 +27,11 @@ docker compose up --build
 - GraphQL : [http://localhost:3000/graphql](http://localhost:3000/graphql)
 - Airflow : [http://localhost:8080](http://localhost:8080)
 
+## Lancement avec téléchargement des avis "bien dans ma ville"
+```bash
+docker compose --profile scrapers up --build
+```
+
 ## Architecture
 
 Documentation complète : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (diagrammes, composants, flux E2E, choix techniques).
