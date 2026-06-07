@@ -366,14 +366,13 @@ def main() -> None:
         print("MONGODB_URL manquant (ou utilisez --dry-run).", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Sitemap: {sitemap_url}", file=sys.stderr)
+    print(f"Sitemap: {sitemap_url}")
     with httpx.Client(timeout=60.0) as client:
         xml = fetch_text(client, sitemap_url)
         urls = extract_loc_urls(xml)
         total = len(urls)
         print(
-            f"{total} page(s) avis à traiter ({workers} worker(s)).",
-            file=sys.stderr,
+            f"{total} page(s) avis à traiter ({workers} worker(s))."
         )
 
         mongo_client: MongoClient | None = None
@@ -415,13 +414,13 @@ def main() -> None:
                         ok += 1
                     else:
                         err += 1
-                print(f"[{n}/{total}] {msg}", file=sys.stderr)
+                print(f"[{n}/{total}] {msg}")
 
         if mongo_client:
             mongo_client.close()
 
     suffix = " (dry-run)" if dry_run else ""
-    print(f"Terminé: {ok} OK, {err} erreur(s).{suffix}", file=sys.stderr)
+    print(f"Terminé: {ok} OK, {err} erreur(s).{suffix}")
 
 
 if __name__ == "__main__":

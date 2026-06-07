@@ -35,6 +35,26 @@ export class City {
     environnement: number;
     vie_pratique: number;
   };
+
+  /** Agrégat sentiment NLP par commune (pipeline_avis_nlp) */
+  @Prop({ type: Object, default: null })
+  sentiment_global: {
+    average_score: number;
+    label: 'positive' | 'negative' | 'neutral';
+    review_count: number;
+    positive_count: number;
+    neutral_count: number;
+    negative_count: number;
+    analyzed_at: Date;
+  } | null;
+
+  /** Top mots pour wordcloud ({ words: [{ word, weight }], method, generated_at }) */
+  @Prop({ type: Object, default: null })
+  wordcloud_data: {
+    method: string;
+    words: { word: string; weight: number }[];
+    generated_at: Date;
+  } | null;
 }
 
 export const CitySchema = SchemaFactory.createForClass(City);
