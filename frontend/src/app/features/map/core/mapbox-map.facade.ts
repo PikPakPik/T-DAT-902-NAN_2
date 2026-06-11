@@ -18,6 +18,7 @@ import type { DepartmentsFeatureCollection } from '../services/graphql/departmen
 import type { PlotsFeatureCollection } from '../services/graphql/plots-graphql.service';
 import type { RegionsFeatureCollection } from '../services/graphql/regions-graphql.service';
 import type { SectionsFeatureCollection } from '../services/graphql/sections-graphql.service';
+import type { SelectedCity } from '../models/selected-city.model';
 import type { MapBounds } from '../services/map-bounds.utils';
 
 const MAP_STYLE = 'mapbox://styles/mapbox/streets-v12';
@@ -58,6 +59,8 @@ export type LoadPlotsFn = (
   bounds: MapBounds,
 ) => Promise<PlotsFeatureCollection>;
 
+export type CitySelectFn = (city: SelectedCity) => void;
+
 export class MapboxMapFacade {
   #map?: mapboxgl.Map;
   #marker?: mapboxgl.Marker;
@@ -82,11 +85,13 @@ export class MapboxMapFacade {
     loadCities?: LoadCitiesFn,
     loadSections?: LoadSectionsFn,
     loadPlots?: LoadPlotsFn,
+    onCitySelect?: CitySelectFn,
   ) {
     this.#loadDepartments = loadDepartments;
     this.#loadCities = loadCities;
     this.#loadSections = loadSections;
     this.#loadPlots = loadPlots;
+    this.#onCitySelect = onCitySelect;
 
     this.#citiesOverlay = new CitiesMapOverlay();
     this.#sectionsOverlay = new SectionsMapOverlay();

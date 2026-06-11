@@ -36,7 +36,7 @@ x-airflow-common:
     SENTIMENT_TORCH_THREADS: ${SENTIMENT_TORCH_THREADS:-0}
     SENTIMENT_MODEL: ${SENTIMENT_MODEL:-nlptown/bert-base-multilingual-uncased-sentiment}
     WORDCLOUD_METHOD: ${WORDCLOUD_METHOD:-count}
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-pymongo>=4.8.0,ijson}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-pymongo>=4.8.0 ijson}
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs

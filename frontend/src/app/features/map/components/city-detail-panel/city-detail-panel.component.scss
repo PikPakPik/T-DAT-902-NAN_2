@@ -1,0 +1,236 @@
+:host {
+  position: absolute;
+  inset: 0 0 0 auto;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.city-detail-panel {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100vw);
+  height: 100%;
+  background: rgba(255, 255, 255, 0.97);
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.city-detail-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.city-detail-panel__close {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: #e2e8f0;
+  }
+}
+
+.city-detail-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.city-detail-panel__notice {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sentiment-gauge--pending {
+  background: #fff;
+}
+
+.city-detail-panel__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.city-detail-panel__code {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.city-detail-panel__section {
+  margin-bottom: 1.5rem;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+}
+
+.city-detail-panel__state {
+  display: grid;
+  place-items: center;
+  gap: 0.75rem;
+  padding: 2rem 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+
+  &--error {
+    color: #b91c1c;
+  }
+}
+
+.city-detail-panel__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(99, 102, 241, 0.15);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: city-detail-spin 0.8s linear infinite;
+}
+
+@keyframes city-detail-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sentiment-gauge {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.sentiment-gauge__score-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sentiment-gauge__score {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.sentiment-gauge__max {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.sentiment-gauge__counts {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.sentiment-gauge__positive {
+  color: #15803d;
+}
+
+.sentiment-gauge__neutral {
+  color: #a16207;
+}
+
+.sentiment-gauge__negative {
+  color: #b91c1c;
+}
+
+.wordcloud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  min-height: 140px;
+  padding: 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px solid #e2e8f0;
+}
+
+.wordcloud__word {
+  line-height: 1.1;
+  font-weight: 700;
+  color: #312e81;
+  cursor: default;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.review-list__item {
+  padding: 0.875rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.review-list__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.review-list__score {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.review-list__comment {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #334155;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+:host ::ng-deep .sentiment-gauge__bar .p-progressbar-value {
+  background: linear-gradient(90deg, #ef4444 0%, #eab308 50%, #22c55e 100%);
+}

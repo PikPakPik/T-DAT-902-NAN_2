@@ -1,0 +1,142 @@
+@if (visible()) {
+  <aside class="city-detail-panel" aria-label="Analyse textuelle commune">
+    <header class="city-detail-panel__header">
+      <div>
+        <h2 class="city-detail-panel__title">{{ displayName() }}</h2>
+        @if (city()?.code) {
+          <span class="city-detail-panel__code">INSEE {{ city()!.code }}</span>
+        }
+      </div>
+      <button
+        type="button"
+        class="city-detail-panel__close"
+        aria-label="Fermer le panneau"
+        (click)="close()"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="city-detail-panel__body">
+      @if (loading()) {
+        <div class="city-detail-panel__state">
+          <div class="city-detail-panel__spinner"></div>
+          <p>Chargement de l'analyse textuelle…</p>
+        </div>
+      } @else if (error()) {
+        <div class="city-detail-panel__state city-detail-panel__state--error">
+          <p>{{ error() }}</p>
+        </div>
+      } @else if (!hasInsights()) {
+        <div class="city-detail-panel__state">
+          <p>Aucune analyse textuelle disponible pour cette commune.</p>
+        </div>
+      } @else {
+        @if (nlpPending()) {
+          <div class="city-detail-panel__notice">
+            Analyse NLP pas encore calculée pour cette commune (sentiment + wordcloud).
+            Les notes affichées proviennent des avis source Bien-dans-ma-ville.
+          </div>
+
+          @if (averageOverallRating(); as avg) {
+            <section class="city-detail-panel__section">
+              <h3>Note moyenne avis</h3>
+              <div class="sentiment-gauge sentiment-gauge--pending">
+                <div class="sentiment-gauge__score-row">
+                  <span class="sentiment-gauge__score">{{ avg | number: '1.1-1' }}</span>
+                  <span class="sentiment-gauge__max">/ 5</span>
+                  <p-tag value="En attente NLP" severity="secondary" />
+                </div>
+                <p-progressBar
+                  [value]="averageOverallPercent()"
+                  [showValue]="false"
+                  [style]="{ height: '10px' }"
+                  styleClass="sentiment-gauge__bar"
+                />
+                <p class="sentiment-gauge__counts">
+                  Moyenne sur les {{ recentReviews().length }} avis récents affichés
+                </p>
+              </div>
+            </section>
+          }
+        }
+
+        @if (sentiment(); as s) {
+          <section class="city-detail-panel__section">
+            <h3>Sentiment global</h3>
+            <div class="sentiment-gauge">
+              <div class="sentiment-gauge__score-row">
+                <span class="sentiment-gauge__score">{{ s.averageScore | number: '1.1-1' }}</span>
+                <span class="sentiment-gauge__max">/ 5</span>
+                <p-tag
+                  [value]="sentimentLabelFr()"
+                  [severity]="sentimentSeverity()"
+                />
+              </div>
+              <p-progressBar
+                [value]="sentimentPercent()"
+                [showValue]="false"
+                [style]="{ height: '10px' }"
+                styleClass="sentiment-gauge__bar"
+              />
+              <p class="sentiment-gauge__counts">
+                {{ s.reviewCount }} avis ·
+                <span class="sentiment-gauge__positive">{{ s.positiveCount }} positifs</span> ·
+                <span class="sentiment-gauge__neutral">{{ s.neutralCount }} neutres</span> ·
+                <span class="sentiment-gauge__negative">{{ s.negativeCount }} négatifs</span>
+              </p>
+            </div>
+          </section>
+        }
+
+        @if (wordcloudWords().length) {
+          <section class="city-detail-panel__section">
+            <h3>Nuage de mots</h3>
+            <div class="wordcloud" aria-label="Nuage de mots">
+              @for (word of wordcloudWords(); track word.word) {
+                <span
+                  class="wordcloud__word"
+                  [style.font-size]="wordFontSize(word.weight)"
+                  [style.opacity]="wordOpacity(word.weight)"
+                >
+                  {{ word.word }}
+                </span>
+              }
+            </div>
+          </section>
+        }
+
+        @if (recentReviews().length) {
+          <section class="city-detail-panel__section">
+            <h3>Avis récents</h3>
+            <ul class="review-list">
+              @for (review of recentReviews(); track review.date + review.comment) {
+                <li class="review-list__item">
+                  <div class="review-list__meta">
+                    <time [dateTime]="review.date">
+                      {{ review.date | date: 'mediumDate' }}
+                    </time>
+                    <p-tag
+                      [value]="reviewTagLabel(review)"
+                      [severity]="reviewTagSeverity(review)"
+                    />
+                    @if (review.sentimentScore != null) {
+                      <span class="review-list__score">
+                        Sentiment ★ {{ review.sentimentScore | number: '1.1-1' }}/5
+                      </span>
+                    } @else {
+                      <span class="review-list__score">
+                        Note ★ {{ review.overallRating | number: '1.1-1' }}/5
+                      </span>
+                    }
+                  </div>
+                  <p class="review-list__comment">{{ review.comment }}</p>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </div>
+  </aside>
+}

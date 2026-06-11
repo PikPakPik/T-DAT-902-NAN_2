@@ -25,5 +25,14 @@
   } @else {
     <div #map class="map"></div>
   }
+
+  <city-detail-panel
+    [visible]="panelVisible()"
+    [loading]="insightsLoading()"
+    [error]="insightsError()"
+    [city]="selectedCity()"
+    [insights]="cityInsights()"
+    (closed)="onPanelClosed()"
+  />
 </div>
 

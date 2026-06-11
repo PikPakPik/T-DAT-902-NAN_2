@@ -220,24 +220,42 @@ def analyze_reviews(
             ]
         }
 
-    pending = reviews_col.count_documents(query)
+    # Snapshot des _id à traiter : évite un dépassement du compteur si le scraper
+    # réécrit des avis (replace_one) pendant l'inférence et que le curseur voit
+    # plus de documents que count_documents() au départ.
+    total_reviews = reviews_col.count_documents({})
+    work_ids = [
+        doc["_id"]
+        for doc in reviews_col.find(query, {"_id": 1}).sort("_id", 1)
+    ]
+    pending = len(work_ids)
+    already_done = total_reviews - pending
     max_length = int(os.environ.get("SENTIMENT_MAX_LENGTH", DEFAULT_MAX_LENGTH))
     print(
-        f"{pending} avis à analyser "
-        f"(batch_size={batch_size}, max_length={max_length})."
+        f"{pending} avis à analyser sur {total_reviews} au total "
+        f"({already_done} déjà traités, batch_size={batch_size}, "
+        f"max_length={max_length})."
     )
 
     analyzed = 0
+    skipped = 0
     touched_codes: set[str] = set()
     now = utcnow()
-    cursor = reviews_col.find(query, {"_id": 1, "code": 1, "comment": 1}).batch_size(
-        batch_size * 4
-    )
+    projection = {"_id": 1, "code": 1, "comment": 1}
+    fetch_chunk = batch_size * 4
 
     batch_ids: list[Any] = []
     batch_comments: list[str] = []
     batch_codes: list[str] = []
     pending_writes: list[UpdateOne] = []
+
+    def log_progress(processed: int) -> None:
+        if pending <= 0:
+            return
+        print(
+            f"  {min(processed, pending)}/{pending} avis parcourus "
+            f"({analyzed} mis à jour, {skipped} supprimés)…"
+        )
 
     def flush_batch() -> None:
         nonlocal analyzed
@@ -273,43 +291,67 @@ def analyze_reviews(
         batch_comments.clear()
         batch_codes.clear()
 
-    for doc in cursor:
-        comment = (doc.get("comment") or "").strip()
-        if not comment:
-            pending_writes.append(
-                UpdateOne(
-                    {"_id": doc["_id"]},
-                    {
-                        "$set": {
-                            "sentiment_score": 3.0,
-                            "sentiment_label": "neutral",
-                            "keywords": [],
-                            "sentiment_analyzed_at": now,
-                        }
-                    },
-                )
+    processed = 0
+    for offset in range(0, pending, fetch_chunk):
+        id_chunk = work_ids[offset : offset + fetch_chunk]
+        docs_by_id = {
+            doc["_id"]: doc
+            for doc in reviews_col.find(
+                {"_id": {"$in": id_chunk}},
+                projection,
             )
-            analyzed += 1
-            if len(pending_writes) >= MONGO_BULK_SIZE:
-                bulk_update_reviews(reviews_col, pending_writes)
-                pending_writes.clear()
-            continue
+        }
+        for doc_id in id_chunk:
+            processed += 1
+            doc = docs_by_id.get(doc_id)
+            if doc is None:
+                skipped += 1
+                if processed % batch_size == 0 or processed == pending:
+                    log_progress(processed)
+                continue
 
-        batch_ids.append(doc["_id"])
-        batch_comments.append(comment)
-        batch_codes.append(doc.get("code") or "")
-        if len(batch_comments) >= batch_size:
-            flush_batch()
-            print(f"  {analyzed}/{pending} avis traités…")
+            comment = (doc.get("comment") or "").strip()
+            if not comment:
+                pending_writes.append(
+                    UpdateOne(
+                        {"_id": doc["_id"]},
+                        {
+                            "$set": {
+                                "sentiment_score": 3.0,
+                                "sentiment_label": "neutral",
+                                "keywords": [],
+                                "sentiment_analyzed_at": now,
+                            }
+                        },
+                    )
+                )
+                analyzed += 1
+                if len(pending_writes) >= MONGO_BULK_SIZE:
+                    bulk_update_reviews(reviews_col, pending_writes)
+                    pending_writes.clear()
+                if processed % batch_size == 0 or processed == pending:
+                    log_progress(processed)
+                continue
+
+            batch_ids.append(doc["_id"])
+            batch_comments.append(comment)
+            batch_codes.append(doc.get("code") or "")
+            if len(batch_comments) >= batch_size:
+                flush_batch()
+                log_progress(processed)
 
     flush_batch()
     bulk_update_reviews(reviews_col, pending_writes)
     pending_writes.clear()
+    if pending > 0:
+        log_progress(processed)
 
     communes = aggregate_commune_sentiment(reviews_col, touched_codes or None)
     stats = {
         "analyzed": analyzed,
+        "skipped": skipped,
         "communes_updated": communes,
+        "total_reviews": total_reviews,
         "pending_before": pending,
         "batch_size": batch_size,
     }

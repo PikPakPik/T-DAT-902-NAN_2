@@ -1,6 +1,9 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import { CityDetailPanelComponent } from './components/city-detail-panel/city-detail-panel.component';
 import { MapboxMapFacade } from './core/mapbox-map.facade';
+import type { SelectedCity } from './models/selected-city.model';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
+import { CityInsightsGraphqlService, type CityInsightsGql } from './services/graphql/city-insights-graphql.service';
 import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
 import { MapGraphqlSmokeService } from './services/graphql/map-graphql-smoke.service';
 import { PlotsGraphqlService } from './services/graphql/plots-graphql.service';
@@ -10,6 +13,7 @@ import { SectionsGraphqlService } from './services/graphql/sections-graphql.serv
 @Component({
   selector: 'map',
   standalone: true,
+  imports: [CityDetailPanelComponent],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
 })
@@ -20,15 +24,24 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly graphqlHttpInfo = signal('');
   readonly isLoading = computed(() => this.graphqlStatus() === 'idle' || this.graphqlStatus() === 'loading');
 
+  readonly panelVisible = signal(false);
+  readonly selectedCity = signal<SelectedCity | null>(null);
+  readonly cityInsights = signal<CityInsightsGql | null>(null);
+  readonly insightsLoading = signal(false);
+  readonly insightsError = signal<string | null>(null);
+
   mapElement = viewChild<ElementRef<HTMLDivElement>>('map');
 
   #mapFacade?: MapboxMapFacade;
+  #insightsRequestSeq = 0;
   #graphqlSmoke = inject(MapGraphqlSmokeService);
   #regionsGraphql = inject(RegionsGraphqlService);
   #departmentsGraphql = inject(DepartmentsGraphqlService);
   #citiesGraphql = inject(CitiesGraphqlService);
   #sectionsGraphql = inject(SectionsGraphqlService);
   #plotsGraphql = inject(PlotsGraphqlService);
+  #cityInsightsGraphql = inject(CityInsightsGraphqlService);
+  #ngZone = inject(NgZone);
 
   ngAfterViewInit(): void {
     void this.#bootstrapMap();
@@ -46,6 +59,37 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.#mapFacade?.destroy();
+  }
+
+  onPanelClosed(): void {
+    this.panelVisible.set(false);
+  }
+
+  async #handleCitySelect(city: SelectedCity): Promise<void> {
+    this.selectedCity.set(city);
+    this.panelVisible.set(true);
+    this.cityInsights.set(null);
+    this.insightsError.set(null);
+    this.insightsLoading.set(true);
+
+    const seq = ++this.#insightsRequestSeq;
+
+    try {
+      const insights = await this.#cityInsightsGraphql.fetchByCode(city.code);
+      if (seq !== this.#insightsRequestSeq) return;
+      this.cityInsights.set(insights);
+    } catch (error) {
+      if (seq !== this.#insightsRequestSeq) return;
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Impossible de charger l’analyse textuelle.';
+      this.insightsError.set(message);
+    } finally {
+      if (seq === this.#insightsRequestSeq) {
+        this.insightsLoading.set(false);
+      }
+    }
   }
 
   async #bootstrapMap(): Promise<void> {
