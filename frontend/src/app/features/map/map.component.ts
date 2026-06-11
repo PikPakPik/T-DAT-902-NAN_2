@@ -84,14 +84,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       regionsGeoJson,
       (bounds) => this.#departmentsGraphql.fetchFeatureCollection(bounds),
       (bounds) => this.#citiesGraphql.fetchFeatureCollection(bounds),
-      (bounds, cityId) =>
-        cityId != null
-          ? this.#sectionsGraphql.fetchByCityId(cityId)
-          : this.#sectionsGraphql.fetchFeatureCollection(bounds),
-      (bounds, sectionId) =>
-        sectionId != null
-          ? this.#plotsGraphql.fetchBySectionId(sectionId)
-          : this.#plotsGraphql.fetchFeatureCollection(bounds),
+      (bounds) => this.#sectionsGraphql.fetchFeatureCollection(bounds),
+      (bounds) => this.#plotsGraphql.fetchFeatureCollection(bounds),
     );
     this.#mapFacade.init(el);
   }

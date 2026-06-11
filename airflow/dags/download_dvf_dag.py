@@ -1,48 +1,24 @@
 from __future__ import annotations
 
 import os
-import shutil
 from datetime import datetime, timedelta
-from urllib.error import URLError
-from urllib.request import Request, urlopen
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+from download_utils import download_to_path
 
 BASE_URL = "https://files.data.gouv.fr/geo-dvf/latest/csv"
-
-# Repertoire de destination dans le container. Monte ./airflow/data:/opt/airflow/data
-# dans compose.yaml pour persister les fichiers sur l'hote.
 DOWNLOAD_DIR = os.environ.get("DVF_DOWNLOAD_DIR", "/opt/airflow/data/dvf")
-
-# Annees a telecharger. Par defaut 2021 (premiere annee disponible) jusqu'a
-# l'annee complete precedente. Surchargeable via les variables d'environnement.
 START_YEAR = int(os.environ.get("DVF_START_YEAR", "2021"))
 END_YEAR = int(os.environ.get("DVF_END_YEAR", str(datetime.now().year - 1)))
 YEARS = list(range(START_YEAR, END_YEAR + 1))
 
 
 def download_dvf(year: int) -> None:
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     url = f"{BASE_URL}/{year}/full.csv.gz"
     target = os.path.join(DOWNLOAD_DIR, f"full-{year}.csv.gz")
-    tmp = f"{target}.part"
-
-    request = Request(url, headers={"User-Agent": "airflow-homepedia"})
-    try:
-        with urlopen(request, timeout=600) as response, open(tmp, "wb") as fh:
-            if response.getcode() != 200:
-                raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
-            shutil.copyfileobj(response, fh)
-    except URLError as exc:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
-
-    os.replace(tmp, target)
-    size_mb = os.path.getsize(target) / (1024 * 1024)
-    print(f"Downloaded {url} -> {target} ({size_mb:.2f} MB)")
+    download_to_path(url, target, timeout=600)
 
 
 def report_downloads() -> None:

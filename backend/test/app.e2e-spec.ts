@@ -1,35 +1,36 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('App (e2e)', () => {
   let app: INestApplication<App>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
+  }, 30_000);
+
+  afterAll(async () => {
+    await app?.close();
   });
 
-  afterEach(async () => {
-    await app.close();
-  });
-
-  it('/ (GET)', () => {
+  it('GET /api', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/api')
       .expect(200)
       .expect('Hello World!');
   });
 
-  it('/health (GET)', () => {
+  it('GET /api/health', () => {
     return request(app.getHttpServer())
-      .get('/health')
+      .get('/api/health')
       .expect(200)
       .expect((res) => {
         const body = res.body as {
@@ -45,7 +46,7 @@ describe('AppController (e2e)', () => {
       });
   });
 
-  it('GraphQL ping', () => {
+  it('POST /graphql ping', () => {
     return request(app.getHttpServer())
       .post('/graphql')
       .send({ query: '{ ping }' })

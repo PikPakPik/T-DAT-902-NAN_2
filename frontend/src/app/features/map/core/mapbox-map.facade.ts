@@ -52,12 +52,10 @@ export type LoadCitiesFn = (
 
 export type LoadSectionsFn = (
   bounds: MapBounds,
-  cityId?: number,
 ) => Promise<SectionsFeatureCollection>;
 
 export type LoadPlotsFn = (
   bounds: MapBounds,
-  sectionId?: number,
 ) => Promise<PlotsFeatureCollection>;
 
 export class MapboxMapFacade {
@@ -74,8 +72,6 @@ export class MapboxMapFacade {
   readonly #loadCities?: LoadCitiesFn;
   readonly #loadSections?: LoadSectionsFn;
   readonly #loadPlots?: LoadPlotsFn;
-  #drillCityId?: number;
-  #drillSectionId?: number;
   #layerLoadSeq = 0;
   #onMoveEnd?: () => void;
 
@@ -92,13 +88,8 @@ export class MapboxMapFacade {
     this.#loadSections = loadSections;
     this.#loadPlots = loadPlots;
 
-    this.#citiesOverlay = new CitiesMapOverlay((cityId) => {
-      this.#drillCityId = cityId;
-      this.#drillSectionId = undefined;
-    });
-    this.#sectionsOverlay = new SectionsMapOverlay((sectionId) => {
-      this.#drillSectionId = sectionId;
-    });
+    this.#citiesOverlay = new CitiesMapOverlay();
+    this.#sectionsOverlay = new SectionsMapOverlay();
 
     this.#overlayStack.register(() => new CountriesMapOverlay());
     if (regionsGeoJson?.features.length) {
@@ -201,8 +192,6 @@ export class MapboxMapFacade {
     const seq = ++this.#layerLoadSeq;
 
     if (zoom <= MAP_DETAIL_MIN_ZOOM) {
-      this.#drillCityId = undefined;
-      this.#drillSectionId = undefined;
       this.#departmentsOverlay.setData(EMPTY_DEPARTMENTS);
       this.#citiesOverlay.setData(EMPTY_CITIES);
       this.#sectionsOverlay.setData(EMPTY_SECTIONS);
@@ -217,10 +206,9 @@ export class MapboxMapFacade {
 
       if (!this.#loadPlots) return;
 
-      const plotsGeoJson = await this.#loadPlots(
-        mapBounds,
-        this.#drillSectionId,
-      ).catch(() => EMPTY_PLOTS);
+      const plotsGeoJson = await this.#loadPlots(mapBounds).catch(
+        () => EMPTY_PLOTS,
+      );
       if (seq !== this.#layerLoadSeq) return;
 
       this.#plotsOverlay.setData(plotsGeoJson);
@@ -228,9 +216,6 @@ export class MapboxMapFacade {
     }
 
     this.#plotsOverlay.setData(EMPTY_PLOTS);
-    if (zoom < MAP_SECTIONS_MIN_ZOOM) {
-      this.#drillSectionId = undefined;
-    }
 
     if (zoom >= MAP_SECTIONS_MIN_ZOOM) {
       this.#departmentsOverlay.setData(EMPTY_DEPARTMENTS);
@@ -238,10 +223,9 @@ export class MapboxMapFacade {
 
       if (!this.#loadSections) return;
 
-      const sectionsGeoJson = await this.#loadSections(
-        mapBounds,
-        this.#drillCityId,
-      ).catch(() => EMPTY_SECTIONS);
+      const sectionsGeoJson = await this.#loadSections(mapBounds).catch(
+        () => EMPTY_SECTIONS,
+      );
       if (seq !== this.#layerLoadSeq) return;
 
       this.#sectionsOverlay.setData(sectionsGeoJson);
@@ -249,9 +233,6 @@ export class MapboxMapFacade {
     }
 
     this.#sectionsOverlay.setData(EMPTY_SECTIONS);
-    if (zoom < MAP_CITIES_MIN_ZOOM) {
-      this.#drillCityId = undefined;
-    }
 
     if (zoom >= MAP_CITIES_MIN_ZOOM) {
       this.#departmentsOverlay.setData(EMPTY_DEPARTMENTS);

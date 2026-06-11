@@ -1,62 +1,34 @@
 from __future__ import annotations
 
+import json
 import os
-import shutil
+import unicodedata
 from datetime import datetime, timedelta
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-import json
-
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+from download_utils import USER_AGENT, download_to_path
 
 API_BASE = "https://www.data.gouv.fr/api/1"
 SLUG = (
     "bases-statistiques-communale-departementale-et-regionale-de-la-"
     "delinquance-enregistree-par-la-police-et-la-gendarmerie-nationales"
 )
-# On ne veut QUE la base communale au format CSV compresse. Le dataset contient
-# aussi des variantes parquet / xlsx et une ressource "COM COMPL" : on resout
-# donc la ressource par son titre exact (+ format) via l'API. L'URL reelle
-# contient un horodatage qui change a chaque mise a jour -> resolution dynamique.
 RESOURCE_TITLE = (
     "COM - Base statistique communale de la delinquance enregistree par la "
     "police et la gendarmerie nationales (fichier csv compresse)"
 )
 RESOURCE_FORMAT = "csv.gz"
-
-USER_AGENT = "airflow-homepedia"
-
-# Repertoire de destination dans le container. Monte ./airflow/data:/opt/airflow/data
-# dans compose.yaml pour persister les fichiers sur l'hote.
 DOWNLOAD_DIR = os.environ.get("DELINQUANCE_DOWNLOAD_DIR", "/opt/airflow/data/delinquance")
 
 
 def _norm(text: str) -> str:
-    # Comparaison de titres insensible a la casse et aux accents (les libelles
-    # data.gouv.fr peuvent varier sur les diacritiques).
-    import unicodedata
-
     decomposed = unicodedata.normalize("NFKD", text)
     ascii_text = decomposed.encode("ascii", "ignore").decode("ascii")
     return " ".join(ascii_text.lower().split())
-
-
-def _download(url: str, target: str) -> None:
-    tmp = f"{target}.part"
-    request = Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urlopen(request, timeout=600) as response, open(tmp, "wb") as fh:
-            if response.getcode() != 200:
-                raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
-            shutil.copyfileobj(response, fh)
-    except URLError as exc:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
-    os.replace(tmp, target)
 
 
 def download_delinquance_communale() -> None:
@@ -84,12 +56,9 @@ def download_delinquance_communale() -> None:
 
     resource = matches[0]
     url = resource["url"]
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     filename = url.rsplit("/", 1)[-1] or f"{resource['id']}.{RESOURCE_FORMAT}"
     target = os.path.join(DOWNLOAD_DIR, filename)
-    _download(url, target)
-    size_mb = os.path.getsize(target) / (1024 * 1024)
-    print(f"Downloaded {url} -> {target} ({size_mb:.2f} MB)")
+    download_to_path(url, target, timeout=600)
 
 
 with DAG(

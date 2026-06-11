@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 from datetime import datetime, timedelta
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -10,34 +9,13 @@ from urllib.request import Request, urlopen
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+from download_utils import USER_AGENT, download_to_path
 
 API_BASE = "https://www.data.gouv.fr/api/1"
 SLUG = "registre-national-dimmatriculation-des-coproprietes"
-# Seule la ressource quotidienne nous interesse. Son URL change chaque jour
-# (prefixe de date), on la retrouve donc par son titre via l'API a chaque run.
 RESOURCE_TITLE = "RNIC - Actualisation quotidienne"
-
-USER_AGENT = "airflow-homepedia"
 WANTED_FORMATS = {"csv", "json"}
-
-# Repertoire de destination dans le container. Monte ./airflow/data:/opt/airflow/data
-# dans compose.yaml pour persister les fichiers sur l'hote.
 DOWNLOAD_DIR = os.environ.get("RNIC_DOWNLOAD_DIR", "/opt/airflow/data/rnic")
-
-
-def _download(url: str, target: str) -> None:
-    tmp = f"{target}.part"
-    request = Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urlopen(request, timeout=600) as response, open(tmp, "wb") as fh:
-            if response.getcode() != 200:
-                raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
-            shutil.copyfileobj(response, fh)
-    except URLError as exc:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
-    os.replace(tmp, target)
 
 
 def download_rnic() -> None:
@@ -57,14 +35,11 @@ def download_rnic() -> None:
     if not matches:
         raise RuntimeError(f"Resource '{RESOURCE_TITLE}' (csv/json) not found in dataset {SLUG}")
 
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     for resource in matches:
         url = resource["url"]
         filename = url.rsplit("/", 1)[-1] or f"{resource['id']}.{resource['format']}"
         target = os.path.join(DOWNLOAD_DIR, filename)
-        _download(url, target)
-        size_mb = os.path.getsize(target) / (1024 * 1024)
-        print(f"Downloaded {url} -> {target} ({size_mb:.2f} MB)")
+        download_to_path(url, target, timeout=600)
 
 
 with DAG(

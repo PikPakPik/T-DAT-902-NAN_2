@@ -46,10 +46,8 @@ export class SectionService {
         ) AS "prixMedianM2"
       FROM sections s
       INNER JOIN cities c ON c.id = s."cityId"
-      WHERE ST_Intersects(
-        s.geom,
-        ST_MakeEnvelope($1, $2, $3, $4, 4326)
-      )
+      WHERE s.geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+        AND ST_Intersects(s.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326))
       ORDER BY name
     `,
       [west, south, east, north],

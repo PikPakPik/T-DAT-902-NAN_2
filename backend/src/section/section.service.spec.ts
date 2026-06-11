@@ -38,7 +38,11 @@ describe('SectionService', () => {
 
     const sections = await service.findInBounds(parisBounds);
 
-    expect(query).toHaveBeenCalledWith(expect.stringContaining('sections s'), [
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('sections s');
+    expect(sql).toContain('s.geom && ST_MakeEnvelope');
+    expect(sql).toContain('ST_Intersects(s.geom, ST_MakeEnvelope');
+    expect(params).toEqual([
       parisBounds.topLeftLng,
       parisBounds.bottomRightLat,
       parisBounds.bottomRightLng,

@@ -15,13 +15,18 @@ x-airflow-common:
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     AIRFLOW_UID: ${AIRFLOW_UID:-50000}
     BACKEND_HEALTH_URL: ${BACKEND_HEALTH_URL:-http://backend:3000/api/health}
+    # Bases métier Homepedia — host/port via .env (défaut = conteneurs locaux).
     POSTGIS_HOST: ${POSTGIS_HOST:-postgis}
-    POSTGIS_PORT: 5432
+    POSTGIS_PORT: ${POSTGIS_PORT:-${POSTGIS_PUBLISH_PORT:-5432}}
+    POSTGRES_USER: ${POSTGRES_USER:-postgres}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    POSTGRES_DB: ${POSTGRES_DB:-homepedia}
+    CADASTRE_DOWNLOAD_DIR: /opt/airflow/data/cadastre
     MONGODB_HOST: ${MONGODB_HOST:-mongodb}
-    MONGODB_PORT: 27017
-    AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGIS_HOST:-postgis}:5432/${POSTGRES_DB:-homepedia}
-    AIRFLOW_CONN_MONGO_DEFAULT: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    MONGODB_PORT: ${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}
+    AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGIS_HOST:-postgis}:${POSTGIS_PORT:-${POSTGIS_PUBLISH_PORT:-5432}}/${POSTGRES_DB:-homepedia}
+    AIRFLOW_CONN_MONGO_DEFAULT: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-ijson}
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
@@ -35,13 +40,15 @@ x-airflow-common:
       condition: service_healthy
     airflow-redis:
       condition: service_healthy
+    postgis:
+      condition: service_healthy
 
 services:
   postgis:
     image: ${POSTGIS_IMAGE:-postgis/postgis:18-3.6-alpine}
     platform: ${POSTGIS_PLATFORM:-linux/amd64}
     ports:
-      - ${POSTGIS_PORT:-5432}:5432
+      - ${POSTGIS_PUBLISH_PORT:-5432}:5432
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -58,7 +65,7 @@ services:
   mongodb:
     image: ${MONGODB_IMAGE:-mongo:8.2}
     ports:
-      - ${MONGODB_PORT:-27017}:27017
+      - ${MONGODB_PUBLISH_PORT:-27017}:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-example}
@@ -86,8 +93,8 @@ services:
       - ${BACKEND_PORT:-3000}:3000
     environment:
       NODE_ENV: development
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgis:5432/${POSTGRES_DB:-homepedia}
-      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGIS_HOST:-postgis}:${POSTGIS_PORT:-${POSTGIS_PUBLISH_PORT:-5432}}/${POSTGRES_DB:-homepedia}
+      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
     volumes:
       - ./backend/:/usr/share/app
     healthcheck:
@@ -95,7 +102,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 60s
     depends_on:
       postgis:
         condition: service_healthy
@@ -266,7 +273,7 @@ services:
     profiles:
       - scrapers
     environment:
-      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/${MONGO_DATABASE:-homepedia}?authSource=admin
+      MONGODB_URL: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-example}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}/${MONGO_DATABASE:-homepedia}?authSource=admin
       SITEMAP_URL: https://www.bien-dans-ma-ville.fr/sitemap-villeavis.xml
       DELAY_MS: "800"
       DRY_RUN: "0"
@@ -276,9 +283,6 @@ services:
       - sh
       - -c
       - pip install --no-cache-dir -r requirements.txt && python scraper.py
-    depends_on:
-      mongodb:
-        condition: service_healthy
 
   spark:
     build:
@@ -287,9 +291,13 @@ services:
     container_name: homepedia-spark
     environment:
       - SPARK_MODE=local
+      - POSTGIS_HOST=${POSTGIS_HOST:-postgis}
+      - POSTGIS_PORT=${POSTGIS_PORT:-${POSTGIS_PUBLISH_PORT:-5432}}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-homepedia}
+      - MONGODB_HOST=${MONGODB_HOST:-mongodb}
+      - MONGODB_PORT=${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}
     volumes:
       - ./spark-jobs:/opt/spark-jobs
     depends_on:

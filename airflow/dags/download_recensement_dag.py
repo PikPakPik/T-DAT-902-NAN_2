@@ -12,6 +12,8 @@ from airflow import DAG
 from airflow.exceptions import AirflowSkipException
 from airflow.operators.python import PythonOperator
 
+from download_utils import USER_AGENT, download_to_path
+
 
 # Recensement INSEE : "Populations legales", un jeu de donnees par millesime.
 # Chaque page propose une archive "ensemble.zip" contenant les CSV a tous les
@@ -34,26 +36,7 @@ PAGES = {
 
 SITE_ROOT = "https://www.insee.fr"
 PAGE_URL_TEMPLATE = "https://www.insee.fr/fr/statistiques/{stat_id}"
-USER_AGENT = "airflow-homepedia"
-
-# Repertoire de destination dans le container. Monte ./airflow/data:/opt/airflow/data
-# dans compose.yaml pour persister les fichiers sur l'hote.
 DOWNLOAD_DIR = os.environ.get("RECENSEMENT_DOWNLOAD_DIR", "/opt/airflow/data/recensement")
-
-
-def _download(url: str, target: str) -> None:
-    tmp = f"{target}.part"
-    request = Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urlopen(request, timeout=600) as response, open(tmp, "wb") as fh:
-            if response.getcode() != 200:
-                raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
-            shutil.copyfileobj(response, fh)
-    except URLError as exc:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
-    os.replace(tmp, target)
 
 
 def _discover_data_urls(stat_id: str) -> list[str]:
@@ -105,9 +88,7 @@ def download_recensement(year: int, stat_id: str) -> None:
     for url in urls:
         filename = url.rsplit("/", 1)[-1]
         target = os.path.join(year_dir, filename)
-        _download(url, target)
-        size_mb = os.path.getsize(target) / (1024 * 1024)
-        print(f"Downloaded {url} -> {target} ({size_mb:.2f} MB)")
+        download_to_path(url, target, timeout=600)
 
         if filename.lower().endswith(".zip"):
             extracted = _extract_csv(target, year_dir)
