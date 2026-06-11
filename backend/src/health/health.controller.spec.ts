@@ -44,7 +44,8 @@ describe('HealthController', () => {
     const result = await controller.check();
 
     expect(healthCheck).toHaveBeenCalledTimes(1);
-    expect(healthCheck.mock.calls[0]?.[0]).toHaveLength(2);
+    const [indicators] = healthCheck.mock.calls[0] as [unknown[]];
+    expect(indicators).toHaveLength(2);
     expect(result.status).toBe('ok');
   });
 });
