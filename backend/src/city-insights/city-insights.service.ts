@@ -21,10 +21,7 @@ export class CityInsightsService {
 
   async findByCode(code: string, limit = 10): Promise<CityInsightsType> {
     const [mongoCity, reviews] = await Promise.all([
-      this.cityModel
-        .findOne({ code, quartier: null })
-        .lean()
-        .exec(),
+      this.cityModel.findOne({ code, quartier: null }).lean().exec(),
       this.reviewModel
         .find({
           code,

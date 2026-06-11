@@ -35,10 +35,13 @@ export class CityDetailPanelComponent {
   readonly #wordcloudVisible = signal(false);
   readonly wordcloudVisible = this.#wordcloudVisible.asReadonly();
 
+  readonly #wordcloudResetKey = computed(
+    () => `${this.city()?.code ?? ''}|${this.insights()?.code ?? ''}`,
+  );
+
   constructor() {
     effect(() => {
-      this.city()?.code;
-      this.insights()?.code;
+      this.#wordcloudResetKey();
       this.#wordcloudVisible.set(false);
     });
   }
