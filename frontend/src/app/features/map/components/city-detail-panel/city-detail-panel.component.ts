@@ -2,14 +2,18 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   input,
   output,
+  signal,
 } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ProgressBar } from 'primeng/progressbar';
 import { Tag } from 'primeng/tag';
 import type { CityInsightsGql } from '../../services/graphql/city-insights-graphql.service';
 import type { SelectedCity } from '../../models/selected-city.model';
+
+type SentimentSeverity = 'success' | 'warn' | 'danger' | 'secondary';
 
 @Component({
   selector: 'city-detail-panel',
@@ -28,34 +32,56 @@ export class CityDetailPanelComponent {
 
   readonly closed = output<void>();
 
+  readonly #wordcloudVisible = signal(false);
+  readonly wordcloudVisible = this.#wordcloudVisible.asReadonly();
+
+  constructor() {
+    effect(() => {
+      this.city()?.code;
+      this.insights()?.code;
+      this.#wordcloudVisible.set(false);
+    });
+  }
+
   readonly displayName = computed(
     () => this.city()?.name ?? this.insights()?.name ?? 'Commune',
   );
 
   readonly sentiment = computed(() => this.insights()?.sentimentGlobal ?? null);
 
-  readonly sentimentPercent = computed(() => {
-    const score = this.sentiment()?.averageScore ?? 0;
-    return Math.round((score / 5) * 100);
-  });
-
-  readonly sentimentSeverity = computed(() => {
-    const label = this.sentiment()?.label;
-    if (label === 'positive') return 'success';
-    if (label === 'negative') return 'danger';
-    return 'warn';
-  });
-
-  readonly sentimentLabelFr = computed(() => {
-    const label = this.sentiment()?.label;
-    if (label === 'positive') return 'Positif';
-    if (label === 'negative') return 'Négatif';
-    return 'Neutre';
-  });
+  readonly recentReviews = computed(
+    () => this.insights()?.recentReviews ?? [],
+  );
 
   readonly wordcloudWords = computed(
     () => this.insights()?.wordcloudData?.words ?? [],
   );
+
+  readonly hasWordcloud = computed(() => this.wordcloudWords().length > 0);
+
+  readonly hasTabContent = computed(
+    () =>
+      this.globalScore() != null ||
+      this.hasWordcloud() ||
+      this.recentReviews().length > 0,
+  );
+
+  readonly globalScore = computed(() => {
+    const nlpScore = this.sentiment()?.averageScore;
+    if (nlpScore != null && Number.isFinite(nlpScore)) return nlpScore;
+    return this.averageOverallRating();
+  });
+
+  readonly globalScorePercent = computed(() => {
+    const score = this.globalScore();
+    return score == null ? 0 : Math.round((score / 5) * 100);
+  });
+
+  readonly globalReviewCount = computed(() => {
+    const count = this.sentiment()?.reviewCount;
+    if (count != null && count > 0) return count;
+    return this.recentReviews().length;
+  });
 
   readonly maxWordWeight = computed(() => {
     const words = this.wordcloudWords();
@@ -63,23 +89,33 @@ export class CityDetailPanelComponent {
     return Math.max(...words.map((w) => w.weight));
   });
 
-  readonly recentReviews = computed(
-    () => this.insights()?.recentReviews ?? [],
-  );
-
-  readonly hasInsights = computed(
-    () =>
-      !!this.sentiment() ||
-      this.wordcloudWords().length > 0 ||
-      this.recentReviews().length > 0,
-  );
-
   readonly nlpPending = computed(
     () =>
       this.recentReviews().length > 0 &&
       !this.sentiment() &&
-      this.wordcloudWords().length === 0,
+      !(this.insights()?.wordcloudData?.words?.length ?? 0),
   );
+
+  readonly headerSentimentPill = computed((): {
+    label: string;
+    severity: SentimentSeverity;
+  } | null => {
+    const label = this.sentiment()?.label;
+    if (label) {
+      return {
+        label: this.sentimentLabelFr(label),
+        severity: this.sentimentSeverity(label),
+      };
+    }
+
+    const avg = this.averageOverallRating();
+    if (avg == null) return null;
+
+    return {
+      label: this.sentimentLabelFromRating(avg),
+      severity: this.sentimentSeverityFromRating(avg),
+    };
+  });
 
   readonly averageOverallRating = computed(() => {
     const ratings = this.recentReviews()
@@ -90,10 +126,29 @@ export class CityDetailPanelComponent {
     return sum / ratings.length;
   });
 
-  readonly averageOverallPercent = computed(() => {
-    const score = this.averageOverallRating();
-    return score == null ? 0 : Math.round((score / 5) * 100);
-  });
+  reviewTagLabel(review: {
+    sentimentLabel: string | null;
+    overallRating: number;
+  }): string {
+    if (review.sentimentLabel) {
+      return this.sentimentLabelFr(review.sentimentLabel);
+    }
+    return this.sentimentLabelFromRating(review.overallRating);
+  }
+
+  reviewTagSeverity(review: {
+    sentimentLabel: string | null;
+    overallRating: number;
+  }): SentimentSeverity {
+    if (review.sentimentLabel) {
+      return this.sentimentSeverity(review.sentimentLabel);
+    }
+    return this.sentimentSeverityFromRating(review.overallRating);
+  }
+
+  toggleWordcloud(): void {
+    this.#wordcloudVisible.update((visible) => !visible);
+  }
 
   wordFontSize(weight: number): string {
     const max = this.maxWordWeight();
@@ -107,53 +162,34 @@ export class CityDetailPanelComponent {
     return 0.45 + (weight / max) * 0.55;
   }
 
-  reviewSeverity(label: string | null): 'success' | 'warn' | 'danger' | 'secondary' {
+  close(): void {
+    this.#wordcloudVisible.set(false);
+    this.closed.emit();
+  }
+
+  private sentimentLabelFr(label: string): string {
+    if (label === 'positive') return 'Avis bien';
+    if (label === 'negative') return 'Avis mauvais';
+    if (label === 'neutral') return 'Avis neutre';
+    return 'Avis non analysé';
+  }
+
+  private sentimentLabelFromRating(rating: number): string {
+    if (rating <= 2.5) return 'Avis mauvais';
+    if (rating <= 3.5) return 'Avis neutre';
+    return 'Avis bien';
+  }
+
+  private sentimentSeverity(label: string): SentimentSeverity {
     if (label === 'positive') return 'success';
     if (label === 'negative') return 'danger';
     if (label === 'neutral') return 'warn';
     return 'secondary';
   }
 
-  reviewSeverityFromRating(rating: number): 'success' | 'warn' | 'danger' | 'secondary' {
+  private sentimentSeverityFromRating(rating: number): SentimentSeverity {
     if (rating <= 2.5) return 'danger';
     if (rating <= 3.5) return 'warn';
     return 'success';
-  }
-
-  reviewLabelFr(label: string | null): string {
-    if (label === 'positive') return 'Positif';
-    if (label === 'negative') return 'Négatif';
-    if (label === 'neutral') return 'Neutre';
-    return 'Non analysé';
-  }
-
-  reviewLabelFromRating(rating: number): string {
-    if (rating <= 2.5) return 'Plutôt négatif';
-    if (rating <= 3.5) return 'Mitigé';
-    return 'Plutôt positif';
-  }
-
-  reviewTagLabel(review: {
-    sentimentLabel: string | null;
-    overallRating: number;
-  }): string {
-    if (review.sentimentLabel) {
-      return this.reviewLabelFr(review.sentimentLabel);
-    }
-    return this.reviewLabelFromRating(review.overallRating);
-  }
-
-  reviewTagSeverity(review: {
-    sentimentLabel: string | null;
-    overallRating: number;
-  }): 'success' | 'warn' | 'danger' | 'secondary' {
-    if (review.sentimentLabel) {
-      return this.reviewSeverity(review.sentimentLabel);
-    }
-    return this.reviewSeverityFromRating(review.overallRating);
-  }
-
-  close(): void {
-    this.closed.emit();
   }
 }

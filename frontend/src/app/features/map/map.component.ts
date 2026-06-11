@@ -130,6 +130,11 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       (bounds) => this.#citiesGraphql.fetchFeatureCollection(bounds),
       (bounds) => this.#sectionsGraphql.fetchFeatureCollection(bounds),
       (bounds) => this.#plotsGraphql.fetchFeatureCollection(bounds),
+      (city) => {
+        this.#ngZone.run(() => {
+          void this.#handleCitySelect(city);
+        });
+      },
     );
     this.#mapFacade.init(el);
   }

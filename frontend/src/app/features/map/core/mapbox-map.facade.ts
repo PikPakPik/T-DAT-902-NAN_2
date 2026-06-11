@@ -91,9 +91,8 @@ export class MapboxMapFacade {
     this.#loadCities = loadCities;
     this.#loadSections = loadSections;
     this.#loadPlots = loadPlots;
-    this.#onCitySelect = onCitySelect;
 
-    this.#citiesOverlay = new CitiesMapOverlay();
+    this.#citiesOverlay = new CitiesMapOverlay(onCitySelect);
     this.#sectionsOverlay = new SectionsMapOverlay();
 
     this.#overlayStack.register(() => new CountriesMapOverlay());
