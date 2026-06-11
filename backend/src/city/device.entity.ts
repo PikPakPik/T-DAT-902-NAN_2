@@ -17,13 +17,10 @@ export class Device {
   city: City;
 
   @Column({ type: 'varchar' })
-  typequ: string;
-
-  @Column({ type: 'varchar' })
-  categorie: string;
-
-  @Column({ type: 'varchar' })
   nom: string;
+
+  @Column({ type: 'varchar', default: '' })
+  address: string;
 
   @Column({ type: 'point' })
   longitude: number;
