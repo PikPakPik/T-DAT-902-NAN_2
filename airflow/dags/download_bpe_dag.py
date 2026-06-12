@@ -78,7 +78,8 @@ def download_bpe() -> None:
 
         if filename.lower().endswith(".zip"):
             extracted = _extract_csv(target, DOWNLOAD_DIR)
-            os.remove(target)
+            if os.path.exists(target):
+                os.remove(target)
             for path in extracted:
                 csv_mb = os.path.getsize(path) / (1024 * 1024)
                 print(f"  extracted {os.path.basename(path)} ({csv_mb:.2f} MB)")
@@ -102,6 +103,7 @@ with DAG(
     start_date=datetime(2026, 1, 1),
     schedule="@monthly",
     catchup=False,
+    max_active_runs=1,
     default_args={
         "retries": 3,
         "retry_delay": timedelta(minutes=2),
@@ -113,15 +115,15 @@ with DAG(
         python_callable=download_bpe,
     )
 
-    load = PythonOperator(
-        task_id="load_bpe_to_db",
-        python_callable=load_bpe,
-    )
-
     report = PythonOperator(
         task_id="report_downloads",
         python_callable=report_downloads,
         trigger_rule="all_done",
     )
 
-    download >> load >> report
+    load = PythonOperator(
+        task_id="load_bpe_to_db",
+        python_callable=load_bpe,
+    )
+
+    download >> report >> load
