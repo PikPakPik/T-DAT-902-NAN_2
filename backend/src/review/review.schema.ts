@@ -48,6 +48,21 @@ export class Review {
 
   @Prop({ type: Number, minimum: 0, default: 0 })
   thumbs_down: number;
+
+  /** Sentiment NLP (pipeline Airflow pipeline_avis_nlp) */
+  @Prop({ type: String, default: null })
+  sentiment_label: 'positive' | 'negative' | 'neutral' | null;
+
+  /** Score sentiment 0–5 (modèle nlptown multi-étoiles) */
+  @Prop({ type: Number, min: 0, max: 5, default: null })
+  sentiment_score: number | null;
+
+  @Prop({ type: Date, default: null })
+  sentiment_analyzed_at: Date | null;
+
+  /** Mots-clés extraits du commentaire (wordcloud / NLP) */
+  @Prop({ type: [String], default: [] })
+  keywords: string[];
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);

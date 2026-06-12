@@ -20,7 +20,11 @@ const EMPTY_COLLECTION: CitiesFeatureCollection = {
   features: [],
 };
 
-export type CitySelectHandler = (cityId: number) => void;
+export type CitySelectHandler = (city: {
+  id: number;
+  name: string;
+  code: string;
+}) => void;
 
 export class CitiesMapOverlay implements MapboxOverlay {
   #geoJson: CitiesFeatureCollection = EMPTY_COLLECTION;
@@ -233,21 +237,15 @@ export class CitiesMapOverlay implements MapboxOverlay {
       const feature = e.features?.[0];
       if (!feature) return;
 
-      const cityIdRaw = feature.properties?.['id'];
-      const cityId =
-        typeof cityIdRaw === 'number'
-          ? cityIdRaw
-          : cityIdRaw != null
-            ? Number(cityIdRaw)
-            : null;
-      if (cityId == null || !Number.isFinite(cityId)) return;
+      const city = this.#resolveCityFromFeature(feature);
+      if (!city) return;
 
       const bounds = getPolygonFeatureBounds(feature);
       if (!bounds) return;
 
       this.#detailViewActive = true;
       this.#clearHoverState();
-      this.onCitySelect?.(cityId);
+      this.onCitySelect?.(city);
 
       map.fitBounds(bounds, {
         padding: 48,
@@ -278,6 +276,42 @@ export class CitiesMapOverlay implements MapboxOverlay {
     map.on('mouseleave', CITIES_FILL_LAYER_ID, this.#onLeave);
     map.on('click', CITIES_FILL_LAYER_ID, this.#onClick);
     map.on('zoomend', this.#onZoomEnd);
+  }
+
+  #resolveCityFromFeature(
+    feature: GeoJSON.Feature,
+  ): { id: number; name: string; code: string } | null {
+    const props = feature.properties ?? {};
+    const idRaw = feature.id ?? props['id'];
+    const cityId =
+      typeof idRaw === 'number'
+        ? idRaw
+        : idRaw != null
+          ? Number(idRaw)
+          : NaN;
+    if (!Number.isFinite(cityId)) return null;
+
+    let name = String(props['name'] ?? '');
+    let code = String(props['code'] ?? '');
+
+    if (!name || !code) {
+      const match = this.#geoJson.features.find(
+        (entry) =>
+          entry.id === cityId || entry.properties?.id === cityId,
+      );
+      if (match?.properties) {
+        name = name || String(match.properties.name ?? '');
+        code = code || String(match.properties.code ?? '');
+      }
+    }
+
+    if (!code) return null;
+
+    return {
+      id: cityId,
+      name: name || 'Commune',
+      code,
+    };
   }
 
   #isCityInteractionDisabled(map: mapboxgl.Map): boolean {

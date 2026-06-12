@@ -1,0 +1,150 @@
+@if (visible()) {
+  <aside class="city-detail-panel" aria-label="Analyse textuelle commune">
+    <header class="city-detail-panel__header">
+      <div class="city-detail-panel__header-main">
+        <div class="city-detail-panel__title-row">
+          <h2 class="city-detail-panel__title">{{ displayName() }}</h2>
+          @if (headerSentimentPill(); as pill) {
+            <p-tag
+              class="city-detail-panel__sentiment-pill"
+              [value]="pill.label"
+              [severity]="pill.severity"
+            />
+          }
+        </div>
+        @if (city()?.code) {
+          <span class="city-detail-panel__code">INSEE {{ city()!.code }}</span>
+        }
+      </div>
+      <button
+        type="button"
+        class="city-detail-panel__close"
+        aria-label="Fermer le panneau"
+        (click)="close()"
+      >
+        ×
+      </button>
+    </header>
+
+    <nav class="city-detail-panel__tabs" aria-label="Sections commune">
+      <button
+        type="button"
+        class="city-detail-panel__tab city-detail-panel__tab--active"
+        aria-current="page"
+      >
+        Avis
+        @if (recentReviews().length) {
+          <span class="city-detail-panel__tab-count">{{ recentReviews().length }}</span>
+        }
+      </button>
+    </nav>
+
+    <div class="city-detail-panel__body">
+      @if (loading()) {
+        <div class="city-detail-panel__state">
+          <div class="city-detail-panel__spinner"></div>
+          <p>Chargement des avis…</p>
+        </div>
+      } @else if (error()) {
+        <div class="city-detail-panel__state city-detail-panel__state--error">
+          <p>{{ error() }}</p>
+        </div>
+      } @else if (!hasTabContent()) {
+        <div class="city-detail-panel__state">
+          <p>Aucun avis disponible pour cette commune.</p>
+        </div>
+      } @else {
+        @if (nlpPending()) {
+          <p class="city-detail-panel__notice">
+            Analyse NLP en cours. Les avis affichés proviennent de Bien-dans-ma-ville.
+          </p>
+        }
+
+        @if (globalScore(); as score) {
+          <section class="global-score" aria-label="Note globale de la commune">
+            <div class="global-score__header">
+              <h3 class="global-score__title">Note globale</h3>
+              @if (headerSentimentPill(); as pill) {
+                <p-tag [value]="pill.label" [severity]="pill.severity" />
+              }
+            </div>
+            <div class="global-score__value-row">
+              <span class="global-score__value">{{ score | number: '1.1-1' }}</span>
+              <span class="global-score__max">/ 5</span>
+            </div>
+            <p-progressBar
+              [value]="globalScorePercent()"
+              [showValue]="false"
+              [style]="{ height: '8px' }"
+              styleClass="global-score__bar"
+            />
+            @if (globalReviewCount()) {
+              <p class="global-score__meta">
+                Basée sur {{ globalReviewCount() }} avis
+              </p>
+            }
+          </section>
+        }
+
+        @if (hasWordcloud()) {
+          <button
+            type="button"
+            class="city-detail-panel__wordcloud-toggle"
+            (click)="toggleWordcloud()"
+          >
+            {{ wordcloudVisible() ? 'Masquer le nuage de mots' : 'Afficher le nuage de mots' }}
+          </button>
+        }
+
+        @if (wordcloudVisible() && wordcloudWords().length) {
+          <section class="wordcloud" aria-label="Nuage de mots">
+            @for (word of wordcloudWords(); track word.word) {
+              <span
+                class="wordcloud__word"
+                [style.font-size]="wordFontSize(word.weight)"
+                [style.opacity]="wordOpacity(word.weight)"
+              >
+                {{ word.word }}
+              </span>
+            }
+          </section>
+        }
+
+        @if (recentReviews().length) {
+          <ul class="review-list">
+          @for (review of recentReviews(); track review.date + review.comment) {
+            <li class="review-list__item">
+              <div class="review-list__meta">
+                <time [dateTime]="review.date">
+                  {{ review.date | date: 'mediumDate' }}
+                </time>
+                <p-tag
+                  [value]="reviewTagLabel(review)"
+                  [severity]="reviewTagSeverity(review)"
+                />
+              </div>
+              <p
+                class="review-list__comment"
+                [class.review-list__comment--collapsed]="
+                  isReviewExpandable(review.comment) && !isReviewExpanded(review)
+                "
+              >
+                {{ review.comment }}
+              </p>
+              @if (isReviewExpandable(review.comment)) {
+                <button
+                  type="button"
+                  class="review-list__expand"
+                  (click)="toggleReviewExpand(review)"
+                >
+                  {{ isReviewExpanded(review) ? 'Afficher moins' : 'Afficher plus' }}
+                </button>
+              }
+            </li>
+          }
+          </ul>
+        }
+      }
+    </div>
+  </aside>
+}
