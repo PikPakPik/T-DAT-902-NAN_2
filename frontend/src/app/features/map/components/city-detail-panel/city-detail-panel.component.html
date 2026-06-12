@@ -123,7 +123,23 @@
                   [severity]="reviewTagSeverity(review)"
                 />
               </div>
-              <p class="review-list__comment">{{ review.comment }}</p>
+              <p
+                class="review-list__comment"
+                [class.review-list__comment--collapsed]="
+                  isReviewExpandable(review.comment) && !isReviewExpanded(review)
+                "
+              >
+                {{ review.comment }}
+              </p>
+              @if (isReviewExpandable(review.comment)) {
+                <button
+                  type="button"
+                  class="review-list__expand"
+                  (click)="toggleReviewExpand(review)"
+                >
+                  {{ isReviewExpanded(review) ? 'Afficher moins' : 'Afficher plus' }}
+                </button>
+              }
             </li>
           }
           </ul>

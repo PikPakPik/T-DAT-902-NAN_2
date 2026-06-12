@@ -292,8 +292,28 @@
   font-size: 0.875rem;
   line-height: 1.5;
   color: #334155;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+
+  &--collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.review-list__expand {
+  margin-top: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #3730a3;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: #312e81;
+  }
 }

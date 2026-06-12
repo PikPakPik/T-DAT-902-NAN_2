@@ -15,6 +15,9 @@ import type { SelectedCity } from '../../models/selected-city.model';
 
 type SentimentSeverity = 'success' | 'warn' | 'danger' | 'secondary';
 
+/** ~4 lignes de texte avant affichage du bouton « Afficher plus » */
+const REVIEW_COMMENT_COLLAPSE_THRESHOLD = 180;
+
 @Component({
   selector: 'city-detail-panel',
   standalone: true,
@@ -35,14 +38,17 @@ export class CityDetailPanelComponent {
   readonly #wordcloudVisible = signal(false);
   readonly wordcloudVisible = this.#wordcloudVisible.asReadonly();
 
-  readonly #wordcloudResetKey = computed(
+  readonly #expandedReviewKeys = signal<ReadonlySet<string>>(new Set());
+
+  readonly #panelResetKey = computed(
     () => `${this.city()?.code ?? ''}|${this.insights()?.code ?? ''}`,
   );
 
   constructor() {
     effect(() => {
-      this.#wordcloudResetKey();
+      this.#panelResetKey();
       this.#wordcloudVisible.set(false);
+      this.#expandedReviewKeys.set(new Set());
     });
   }
 
@@ -151,6 +157,31 @@ export class CityDetailPanelComponent {
 
   toggleWordcloud(): void {
     this.#wordcloudVisible.update((visible) => !visible);
+  }
+
+  reviewKey(review: { date: string; comment: string }): string {
+    return `${review.date}|${review.comment}`;
+  }
+
+  isReviewExpandable(comment: string): boolean {
+    return comment.length > REVIEW_COMMENT_COLLAPSE_THRESHOLD;
+  }
+
+  isReviewExpanded(review: { date: string; comment: string }): boolean {
+    return this.#expandedReviewKeys().has(this.reviewKey(review));
+  }
+
+  toggleReviewExpand(review: { date: string; comment: string }): void {
+    const key = this.reviewKey(review);
+    this.#expandedReviewKeys.update((keys) => {
+      const next = new Set(keys);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   }
 
   wordFontSize(weight: number): string {
