@@ -33,9 +33,43 @@ FILES = [
 
 
 def download_geojson(filename: str) -> None:
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     url = f"{BASE_URL}/{filename}"
     target = os.path.join(DOWNLOAD_DIR, filename)
-    download_to_path(url, target, timeout=600)
+    tmp = f"{target}.part"
+
+    if os.path.isfile(target) and os.path.getsize(target) > 0:
+        size_mb = os.path.getsize(target) / (1024 * 1024)
+        print(f"Already present : {target} ({size_mb:.2f} MB) — skip")
+        return
+
+    if os.path.exists(tmp):
+        os.remove(tmp)
+
+    request = Request(url, headers={"User-Agent": "airflow-homepedia"})
+    timeout = 900 if filename.startswith("communes-5m") else 300
+
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            if response.getcode() != 200:
+                raise RuntimeError(
+                    f"Unexpected HTTP status {response.getcode()} for {url}"
+                )
+            with open(tmp, "wb") as fh:
+                shutil.copyfileobj(response, fh)
+    except (URLError, OSError, TimeoutError) as exc:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise RuntimeError(f"Download failed for {url}: {exc}") from exc
+
+    if not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise RuntimeError(f"Download incomplete for {url}: fichier .part absent ou vide")
+
+    os.replace(tmp, target)
+    size_mb = os.path.getsize(target) / (1024 * 1024)
+    print(f"Downloaded {url} -> {target} ({size_mb:.2f} MB)")
  
  
 def report_downloads() -> None:

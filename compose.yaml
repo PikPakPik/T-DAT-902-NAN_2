@@ -212,7 +212,13 @@ services:
 
   airflow-worker:
     <<: *airflow-common
+    build:
+      context: .
+      dockerfile: .docker/airflow-worker/Dockerfile
+    image: homepedia-airflow-worker
     command: celery worker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD-SHELL", 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"']
       interval: 30s
@@ -321,6 +327,7 @@ services:
       context: .
       dockerfile: .docker/spark/Dockerfile
     container_name: homepedia-spark
+    command: ["tail", "-f", "/dev/null"]
     environment:
       - SPARK_MODE=local
       - POSTGIS_HOST=${POSTGIS_HOST:-postgis}
@@ -332,6 +339,7 @@ services:
       - MONGODB_PORT=${MONGODB_PORT:-${MONGODB_PUBLISH_PORT:-27017}}
     volumes:
       - ./spark-jobs:/opt/spark-jobs
+      - ./airflow/data:/opt/airflow/data
     depends_on:
       postgis:
         condition: service_healthy
