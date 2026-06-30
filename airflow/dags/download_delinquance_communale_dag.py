@@ -11,6 +11,11 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from download_utils import USER_AGENT, download_to_path
+from spark_runner import (
+    report_delinquance_crimes_db,
+    report_delinquance_crimes_silver,
+    run_delinquance_crimes_spark,
+)
 
 API_BASE = "https://www.data.gouv.fr/api/1"
 SLUG = (
@@ -57,13 +62,30 @@ def download_delinquance_communale() -> None:
     resource = matches[0]
     url = resource["url"]
     filename = url.rsplit("/", 1)[-1] or f"{resource['id']}.{RESOURCE_FORMAT}"
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     target = os.path.join(DOWNLOAD_DIR, filename)
-    download_to_path(url, target, timeout=600)
+    download_to_path(url, target, timeout=900)
+
+
+def report_downloads() -> None:
+    if not os.path.isdir(DOWNLOAD_DIR):
+        print(f"No data downloaded yet in {DOWNLOAD_DIR}")
+        return
+    files = sorted(
+        f for f in os.listdir(DOWNLOAD_DIR) if f.lower().endswith(".csv.gz")
+    )
+    total_mb = sum(os.path.getsize(os.path.join(DOWNLOAD_DIR, f)) for f in files) / (
+        1024 * 1024
+    )
+    print(f"{len(files)} fichier(s) dans {DOWNLOAD_DIR} ({total_mb:.2f} MB)")
+    for name in files:
+        size_mb = os.path.getsize(os.path.join(DOWNLOAD_DIR, name)) / (1024 * 1024)
+        print(f"  - {name} ({size_mb:.2f} MB)")
 
 
 with DAG(
     dag_id="download_delinquance_communale",
-    description="Telecharge la base statistique communale de la delinquance (CSV compresse) depuis data.gouv.fr",
+    description="Telecharge et transforme la base statistique communale de la delinquance (SSMSI) depuis data.gouv.fr",
     start_date=datetime(2026, 1, 1),
     schedule="@monthly",
     catchup=False,
@@ -71,9 +93,34 @@ with DAG(
         "retries": 3,
         "retry_delay": timedelta(minutes=2),
     },
-    tags=["homepedia", "ingestion", "delinquance", "data.gouv"],
+    tags=["homepedia", "ingestion", "delinquance", "data.gouv", "spark"],
 ) as dag:
-    PythonOperator(
+    download = PythonOperator(
         task_id="download_delinquance_communale_csv",
         python_callable=download_delinquance_communale,
     )
+
+    transform_silver = PythonOperator(
+        task_id="transform_delinquance_crimes_spark",
+        python_callable=run_delinquance_crimes_spark,
+    )
+
+    report = PythonOperator(
+        task_id="report_downloads",
+        python_callable=report_downloads,
+        trigger_rule="all_done",
+    )
+
+    report_silver_task = PythonOperator(
+        task_id="report_delinquance_crimes_silver",
+        python_callable=report_delinquance_crimes_silver,
+        trigger_rule="all_done",
+    )
+
+    report_db_task = PythonOperator(
+        task_id="report_delinquance_crimes_db",
+        python_callable=report_delinquance_crimes_db,
+        trigger_rule="all_done",
+    )
+
+    download >> transform_silver >> [report, report_silver_task, report_db_task]
