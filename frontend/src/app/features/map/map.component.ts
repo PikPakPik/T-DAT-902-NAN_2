@@ -4,6 +4,7 @@ import { MapboxMapFacade } from './core/mapbox-map.facade';
 import type { SelectedCity } from './models/selected-city.model';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
 import { CityInsightsGraphqlService, type CityInsightsGql } from './services/graphql/city-insights-graphql.service';
+import { CityPopulationGraphqlService, type CityPopulationGql } from './services/graphql/city-population-graphql.service';
 import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
 import { MapGraphqlSmokeService } from './services/graphql/map-graphql-smoke.service';
 import { PlotsGraphqlService } from './services/graphql/plots-graphql.service';
@@ -27,6 +28,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly panelVisible = signal(false);
   readonly selectedCity = signal<SelectedCity | null>(null);
   readonly cityInsights = signal<CityInsightsGql | null>(null);
+  readonly cityPopulation = signal<CityPopulationGql | null>(null);
+  readonly cityPopulationHistory = signal<CityPopulationGql[]>([]);
   readonly insightsLoading = signal(false);
   readonly insightsError = signal<string | null>(null);
 
@@ -41,6 +44,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   #sectionsGraphql = inject(SectionsGraphqlService);
   #plotsGraphql = inject(PlotsGraphqlService);
   #cityInsightsGraphql = inject(CityInsightsGraphqlService);
+  #cityPopulationGraphql = inject(CityPopulationGraphqlService);
   #ngZone = inject(NgZone);
 
   ngAfterViewInit(): void {
@@ -69,21 +73,29 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.selectedCity.set(city);
     this.panelVisible.set(true);
     this.cityInsights.set(null);
+    this.cityPopulation.set(null);
+    this.cityPopulationHistory.set([]);
     this.insightsError.set(null);
     this.insightsLoading.set(true);
 
     const seq = ++this.#insightsRequestSeq;
 
     try {
-      const insights = await this.#cityInsightsGraphql.fetchByCode(city.code);
+      const [insights, population, history] = await Promise.all([
+        this.#cityInsightsGraphql.fetchByCode(city.code),
+        this.#cityPopulationGraphql.fetchByCode(city.code),
+        this.#cityPopulationGraphql.fetchHistoryByCode(city.code),
+      ]);
       if (seq !== this.#insightsRequestSeq) return;
       this.cityInsights.set(insights);
+      this.cityPopulation.set(population);
+      this.cityPopulationHistory.set(history);
     } catch (error) {
       if (seq !== this.#insightsRequestSeq) return;
       const message =
         error instanceof Error
           ? error.message
-          : 'Impossible de charger l’analyse textuelle.';
+          : "Impossible de charger l’analyse textuelle.";
       this.insightsError.set(message);
     } finally {
       if (seq === this.#insightsRequestSeq) {

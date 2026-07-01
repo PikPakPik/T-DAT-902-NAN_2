@@ -8,12 +8,15 @@ import {
   signal,
 } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { UIChart } from 'primeng/chart';
 import { ProgressBar } from 'primeng/progressbar';
 import { Tag } from 'primeng/tag';
 import type { CityInsightsGql } from '../../services/graphql/city-insights-graphql.service';
+import type { CityPopulationGql } from '../../services/graphql/city-population-graphql.service';
 import type { SelectedCity } from '../../models/selected-city.model';
 
 type SentimentSeverity = 'success' | 'warn' | 'danger' | 'secondary';
+type ActiveTab = 'avis' | 'demographie';
 
 /** ~4 lignes de texte avant affichage du bouton « Afficher plus » */
 const REVIEW_COMMENT_COLLAPSE_THRESHOLD = 180;
@@ -21,7 +24,7 @@ const REVIEW_COMMENT_COLLAPSE_THRESHOLD = 180;
 @Component({
   selector: 'city-detail-panel',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, ProgressBar, Tag],
+  imports: [DatePipe, DecimalPipe, UIChart, ProgressBar, Tag],
   templateUrl: './city-detail-panel.component.html',
   styleUrl: './city-detail-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,8 +35,13 @@ export class CityDetailPanelComponent {
   readonly error = input<string | null>(null);
   readonly city = input<SelectedCity | null>(null);
   readonly insights = input<CityInsightsGql | null>(null);
+  readonly population = input<CityPopulationGql | null>(null);
+  readonly populationHistory = input<CityPopulationGql[]>([]);
 
   readonly closed = output<void>();
+
+  readonly #activeTab = signal<ActiveTab>('avis');
+  readonly activeTab = this.#activeTab.asReadonly();
 
   readonly #wordcloudVisible = signal(false);
   readonly wordcloudVisible = this.#wordcloudVisible.asReadonly();
@@ -47,10 +55,82 @@ export class CityDetailPanelComponent {
   constructor() {
     effect(() => {
       this.#panelResetKey();
+      this.#activeTab.set('avis');
       this.#wordcloudVisible.set(false);
       this.#expandedReviewKeys.set(new Set());
     });
   }
+
+  setTab(tab: ActiveTab): void {
+    this.#activeTab.set(tab);
+  }
+
+  formatPopulation(value: number): string {
+    return new Intl.NumberFormat('fr-FR').format(value);
+  }
+
+  formatSuperficie(value: number): string {
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value);
+  }
+
+  formatDensite(value: number): string {
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value);
+  }
+
+  formatEvolution(value: number): string {
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)} %`;
+  }
+
+  readonly populationChartData = computed(() => {
+    const history = this.populationHistory();
+    if (!history.length) return null;
+    return {
+      labels: history.map((h) => String(h.annee)),
+      datasets: [
+        {
+          label: 'Population',
+          data: history.map((h) => h.population),
+          evolutionPct: history.map((h) => h.evolutionPct ?? null),
+          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+          borderColor: '#6366f1',
+          borderWidth: 2,
+          pointBackgroundColor: '#6366f1',
+          pointRadius: 4,
+          fill: true,
+          tension: 0.3,
+        },
+      ],
+    };
+  });
+
+  readonly populationChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { raw: number; dataset: { evolutionPct: (number | null)[] }; dataIndex: number }) => {
+            const pop = new Intl.NumberFormat('fr-FR').format(ctx.raw) + ' hab.';
+            const evo = ctx.dataset.evolutionPct?.[ctx.dataIndex];
+            if (evo == null) return pop;
+            const sign = evo > 0 ? '+' : '';
+            return `${pop}  (${sign}${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(evo)} %)`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        ticks: {
+          callback: (value: number) =>
+            new Intl.NumberFormat('fr-FR', { notation: 'compact' }).format(value),
+        },
+      },
+    },
+  };
 
   readonly displayName = computed(
     () => this.city()?.name ?? this.insights()?.name ?? 'Commune',

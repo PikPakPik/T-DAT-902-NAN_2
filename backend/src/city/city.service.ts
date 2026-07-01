@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MapBoundsInput } from '../department/bounds.input';
 import { City } from './city.entity';
-import { CityType } from './city.object-type';
+import { CityType, PopulationStatsType } from './city.object-type';
 
 interface CityRow {
   id: number;
@@ -58,6 +58,69 @@ export class CityService {
       code: row.code,
       geometry: row.geometry,
       prixMedianM2: row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
+    }));
+  }
+
+  async findLatestPopulationByCode(
+    code: string,
+  ): Promise<PopulationStatsType | null> {
+    const rows = await this.cityRepository.query<
+      { population: string; annee: string; superficie: string; densite: string }[]
+    >(
+      `
+      SELECT
+        pc.population,
+        pc.annee,
+        ROUND((ST_Area(ST_Transform(c.geom, 2154)) / 1000000)::numeric, 2) AS superficie,
+        ROUND((pc.population / NULLIF(ST_Area(ST_Transform(c.geom, 2154)) / 1000000, 0))::numeric, 0) AS densite
+      FROM populate_cities pc
+      JOIN cities c ON c.id = pc."cityId"
+      WHERE c.code = $1
+      ORDER BY pc.annee DESC
+      LIMIT 1
+      `,
+      [code],
+    );
+
+    if (!rows.length) return null;
+    return {
+      population: Number(rows[0].population),
+      annee: Number(rows[0].annee),
+      superficie: Number(rows[0].superficie),
+      densite: Number(rows[0].densite),
+      evolutionPct: null,
+    };
+  }
+
+  async findPopulationHistoryByCode(
+    code: string,
+  ): Promise<PopulationStatsType[]> {
+    const rows = await this.cityRepository.query<
+      { population: string; annee: string; evolution_pct: string | null }[]
+    >(
+      `
+      SELECT
+        pc.population,
+        pc.annee,
+        ROUND(
+          (pc.population - LAG(pc.population) OVER (ORDER BY pc.annee))::numeric
+          / NULLIF(LAG(pc.population) OVER (ORDER BY pc.annee), 0) * 100,
+          2
+        ) AS evolution_pct
+      FROM populate_cities pc
+      JOIN cities c ON c.id = pc."cityId"
+      WHERE c.code = $1
+      ORDER BY pc.annee ASC
+      `,
+      [code],
+    );
+
+    return rows.map((r) => ({
+      population: Number(r.population),
+      annee: Number(r.annee),
+      superficie: null,
+      densite: null,
+      evolutionPct: r.evolution_pct != null ? Number(r.evolution_pct) : null,
     }));
   }
 }
