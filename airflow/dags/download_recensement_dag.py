@@ -13,6 +13,11 @@ from airflow.exceptions import AirflowSkipException
 from airflow.operators.python import PythonOperator
 
 from download_utils import USER_AGENT, download_to_path
+from spark_runner import (
+    report_recensement_population_db,
+    report_recensement_population_silver,
+    run_recensement_population_spark,
+)
 
 
 # Recensement INSEE : "Populations legales", un jeu de donnees par millesime.
@@ -139,10 +144,28 @@ with DAG(
         for year, stat_id in PAGES.items()
     ]
 
+    transform_silver = PythonOperator(
+        task_id="transform_recensement_population_spark",
+        python_callable=run_recensement_population_spark,
+        trigger_rule="none_failed",
+    )
+
     report = PythonOperator(
         task_id="report_downloads",
         python_callable=report_downloads,
         trigger_rule="all_done",
     )
 
-    downloads >> report
+    report_silver_task = PythonOperator(
+        task_id="report_recensement_population_silver",
+        python_callable=report_recensement_population_silver,
+        trigger_rule="all_done",
+    )
+
+    report_db_task = PythonOperator(
+        task_id="report_recensement_population_db",
+        python_callable=report_recensement_population_db,
+        trigger_rule="all_done",
+    )
+
+    downloads >> transform_silver >> [report, report_silver_task, report_db_task]
