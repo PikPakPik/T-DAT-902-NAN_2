@@ -1,0 +1,53 @@
+<div class="filter-panel">
+  <button
+    type="button"
+    class="filter-panel__toggle"
+    [class.filter-panel__toggle--active]="open()"
+    [attr.aria-expanded]="open()"
+    aria-label="Filtres de la carte"
+    (click)="togglePanel()"
+  >
+    <svg class="filter-panel__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="4" y1="6" x2="20" y2="6"/>
+      <line x1="8" y1="12" x2="16" y2="12"/>
+      <line x1="11" y1="18" x2="13" y2="18"/>
+    </svg>
+    Filtres
+    @if (activeFilter) {
+      <span class="filter-panel__badge">1</span>
+    }
+  </button>
+
+  @if (open()) {
+    <div class="filter-panel__panel" role="dialog" aria-label="Filtres carte">
+      <p class="filter-panel__section-title">Données démographiques</p>
+
+      @for (filter of filters(); track filter.id) {
+        <label class="filter-panel__option">
+          <input
+            type="checkbox"
+            class="filter-panel__checkbox"
+            [checked]="filter.active"
+            (change)="toggleFilter(filter.id)"
+          />
+          <span class="filter-panel__option-body">
+            <span class="filter-panel__option-label">{{ filter.label }}</span>
+            <span class="filter-panel__option-desc">{{ filter.description }}</span>
+          </span>
+        </label>
+      }
+
+      @if (activeFilter?.id === 'densite') {
+        <div class="filter-panel__legend">
+          <p class="filter-panel__legend-title">Légende</p>
+          @for (entry of densityLegend; track entry.label) {
+            <div class="filter-panel__legend-row">
+              <span class="filter-panel__legend-swatch" [style.background]="entry.color"></span>
+              <span class="filter-panel__legend-label">{{ entry.label }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -24,6 +24,7 @@
     </div>
   } @else {
     <div #map class="map"></div>
+    <map-filter-panel (filterChanged)="onFilterChanged($event)" />
   }
 
   <city-detail-panel

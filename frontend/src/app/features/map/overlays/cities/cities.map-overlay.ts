@@ -10,6 +10,7 @@ import {
   adminFillColorExpression,
   formatPriceM2,
 } from '../shared/price-colors';
+import { densityFillColorExpression } from '../shared/density-colors';
 
 const CITIES_SOURCE_ID = 'cities-fr';
 const CITIES_FILL_LAYER_ID = 'cities-fr-fill';
@@ -39,6 +40,8 @@ export class CitiesMapOverlay implements MapboxOverlay {
   #detailViewActive = false;
   #interactionsBound = false;
 
+  #activeChoropleth: 'densite' | null = null;
+
   constructor(private readonly onCitySelect?: CitySelectHandler) {}
 
   attach(ctx: MapOverlayContext): void {
@@ -53,6 +56,9 @@ export class CitiesMapOverlay implements MapboxOverlay {
       this.#updateSourceData();
       this.#bindInteractions();
     }
+    if (this.#activeChoropleth) {
+      this.setChoropleth(this.#activeChoropleth);
+    }
   }
 
   setData(geoJson: CitiesFeatureCollection): void {
@@ -62,6 +68,19 @@ export class CitiesMapOverlay implements MapboxOverlay {
     this.#ensureLayers();
     this.#updateSourceData();
     this.#bindInteractions();
+  }
+
+  setChoropleth(key: 'densite' | null): void {
+    this.#activeChoropleth = key;
+    const map = this.#map;
+    if (!map || !map.getLayer(CITIES_FILL_LAYER_ID)) return;
+
+    const expression =
+      key === 'densite'
+        ? densityFillColorExpression()
+        : adminFillColorExpression();
+
+    map.setPaintProperty(CITIES_FILL_LAYER_ID, 'fill-color', expression);
   }
 
   destroy(): void {

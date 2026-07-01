@@ -1,5 +1,7 @@
 import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { CityDetailPanelComponent } from './components/city-detail-panel/city-detail-panel.component';
+import { MapFilterPanelComponent } from './components/map-filter-panel/map-filter-panel.component';
+import type { MapFilterId } from './models/map-filter.model';
 import { MapboxMapFacade } from './core/mapbox-map.facade';
 import type { SelectedCity } from './models/selected-city.model';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
@@ -14,7 +16,7 @@ import { SectionsGraphqlService } from './services/graphql/sections-graphql.serv
 @Component({
   selector: 'map',
   standalone: true,
-  imports: [CityDetailPanelComponent],
+  imports: [CityDetailPanelComponent, MapFilterPanelComponent],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
 })
@@ -67,6 +69,10 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   onPanelClosed(): void {
     this.panelVisible.set(false);
+  }
+
+  onFilterChanged(filterId: MapFilterId | null): void {
+    this.#mapFacade?.setChoropleth(filterId as 'densite' | null);
   }
 
   async #handleCitySelect(city: SelectedCity): Promise<void> {

@@ -11,20 +11,29 @@ export interface CityGql {
   code: string;
   geometry: string;
   prixMedianM2: number | null;
+  densite: number | null;
 }
 
 interface CitiesInBoundsQueryResponse {
   citiesInBounds?: CityGql[];
 }
 
+export interface CityProperties {
+  id: number;
+  name: string;
+  code: string;
+  prixMedianM2: number | null;
+  densite: number | null;
+}
+
 export type CityFeature = GeoJSON.Feature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  { id: number; name: string; code: string; prixMedianM2: number | null }
+  CityProperties
 >;
 
 export type CitiesFeatureCollection = GeoJSON.FeatureCollection<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  { id: number; name: string; code: string; prixMedianM2: number | null }
+  CityProperties
 >;
 
 const QUERY_CITIES_IN_BOUNDS = gql`
@@ -35,6 +44,7 @@ const QUERY_CITIES_IN_BOUNDS = gql`
       code
       geometry
       prixMedianM2
+      densite
     }
   }
 `;
@@ -106,6 +116,7 @@ export class CitiesGraphqlService {
         name: city.name,
         code: city.code,
         prixMedianM2: city.prixMedianM2,
+        densite: city.densite,
       },
       geometry: JSON.parse(city.geometry) as
         | GeoJSON.Polygon

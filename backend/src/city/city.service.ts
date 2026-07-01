@@ -11,6 +11,7 @@ interface CityRow {
   code: string;
   geometry: string;
   prixMedianM2: string | null;
+  densite: string | null;
 }
 
 @Injectable()
@@ -41,7 +42,17 @@ export class CityService {
           )
           FROM stats_cities sc
           WHERE sc."cityId" = c.id
-        ) AS "prixMedianM2"
+        ) AS "prixMedianM2",
+        (
+          SELECT ROUND(
+            (pc.population / NULLIF(ST_Area(ST_Transform(c.geom, 2154)) / 1000000, 0))::numeric,
+            0
+          )
+          FROM populate_cities pc
+          WHERE pc."cityId" = c.id
+          ORDER BY pc.annee DESC
+          LIMIT 1
+        ) AS "densite"
       FROM cities c
       WHERE ST_Intersects(
         c.geom,
@@ -58,6 +69,7 @@ export class CityService {
       code: row.code,
       geometry: row.geometry,
       prixMedianM2: row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
+      densite: row.densite != null ? Number(row.densite) : null,
     }));
   }
 

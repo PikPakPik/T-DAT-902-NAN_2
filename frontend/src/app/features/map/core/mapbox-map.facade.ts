@@ -264,6 +264,10 @@ export class MapboxMapFacade {
     this.#departmentsOverlay.setData(departmentsGeoJson);
   }
 
+  setChoropleth(key: 'densite' | null): void {
+    this.#citiesOverlay.setChoropleth(key);
+  }
+
   destroy(): void {
     if (this.#map && this.#onMoveEnd) {
       this.#map.off('moveend', this.#onMoveEnd);

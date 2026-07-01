@@ -37,4 +37,10 @@ export class CityType {
     description: 'Prix median au m2 en euros (null si indisponible)',
   })
   prixMedianM2: number | null;
+
+  @Field(() => Float, {
+    nullable: true,
+    description: 'Densité de population en hab/km² (dernière année disponible)',
+  })
+  densite: number | null;
 }
