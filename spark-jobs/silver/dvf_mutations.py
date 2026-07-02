@@ -440,6 +440,7 @@ def load_to_db(
         F.col("longitude").cast("double").alias("longitude"),
         F.col("latitude").cast("double").alias("latitude"),
     )
+    mutations_count = to_load.count()
     to_load.write.jdbc(
         url=jdbc_url(),
         table=MUTATIONS_TABLE,
@@ -468,6 +469,7 @@ def load_to_db(
             F.lit(None).cast("int").alias("plotId"),
         )
     )
+    locals_count = locals_to_load.count()
     locals_to_load.write.jdbc(
         url=jdbc_url(),
         table=MUTATION_LOCALS_TABLE,
@@ -475,7 +477,7 @@ def load_to_db(
         properties=jdbc_properties(),
     )
 
-    return to_load.count(), locals_to_load.count()
+    return mutations_count, locals_count
 
 
 def parquet_paths(

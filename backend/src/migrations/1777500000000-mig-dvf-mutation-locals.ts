@@ -53,14 +53,32 @@ export class MigDvfMutationLocals1777500000000 implements MigrationInterface {
       CREATE INDEX IF NOT EXISTS "idx_mutation_locals_id_parcelle" ON "mutation_locals" ("id_parcelle")
     `);
     await queryRunner.query(`
-      ALTER TABLE "mutation_locals"
-        ADD CONSTRAINT "FK_mutation_locals_mutation" FOREIGN KEY ("mutationId")
-        REFERENCES "mutations"("id") ON DELETE CASCADE ON UPDATE NO ACTION
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'FK_mutation_locals_mutation'
+            AND conrelid = '"mutation_locals"'::regclass
+        ) THEN
+          ALTER TABLE "mutation_locals"
+            ADD CONSTRAINT "FK_mutation_locals_mutation" FOREIGN KEY ("mutationId")
+            REFERENCES "mutations"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+      END $$;
     `);
     await queryRunner.query(`
-      ALTER TABLE "mutation_locals"
-        ADD CONSTRAINT "FK_mutation_locals_plot" FOREIGN KEY ("plotId")
-        REFERENCES "plots"("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'FK_mutation_locals_plot'
+            AND conrelid = '"mutation_locals"'::regclass
+        ) THEN
+          ALTER TABLE "mutation_locals"
+            ADD CONSTRAINT "FK_mutation_locals_plot" FOREIGN KEY ("plotId")
+            REFERENCES "plots"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+        END IF;
+      END $$;
     `);
   }
 
