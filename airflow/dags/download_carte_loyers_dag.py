@@ -11,6 +11,7 @@ from airflow.exceptions import AirflowSkipException
 from airflow.operators.python import PythonOperator
 
 from download_utils import USER_AGENT, download_to_path
+from spark_runner import run_loyers_load_spark
 
 API_BASE = "https://www.data.gouv.fr/api/1"
 # Chaque annee est un dataset distinct partageant ce motif de slug. Les annees
@@ -90,14 +91,23 @@ with DAG(
     },
     tags=["homepedia", "ingestion", "loyers"],
 ) as dag:
-    downloads = [
-        PythonOperator(
+    load_tasks = []
+    for year in YEARS:
+        download_task = PythonOperator(
             task_id=f"download_loyers_{year}",
             python_callable=download_year,
             op_kwargs={"year": year},
         )
-        for year in YEARS
-    ]
+        # trigger_rule par défaut (all_success) : si download_loyers_{year}
+        # est skip (dataset absent) ou échoue, load_loyers_{year} est
+        # automatiquement skip / upstream_failed, sans logique supplémentaire.
+        load_task = PythonOperator(
+            task_id=f"load_loyers_{year}",
+            python_callable=run_loyers_load_spark,
+            op_kwargs={"year": year},
+        )
+        download_task >> load_task
+        load_tasks.append(load_task)
 
     report = PythonOperator(
         task_id="report_downloads",
@@ -105,4 +115,4 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    downloads >> report
+    downloads >> load_tasks >> report

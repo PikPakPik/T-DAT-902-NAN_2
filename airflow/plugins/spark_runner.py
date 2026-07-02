@@ -14,6 +14,7 @@ import sys
 FILOSOFI_INCOME_JOB = "/opt/spark-jobs/silver/filosofi_income.py"
 DELINQUANCE_CRIMES_JOB = "/opt/spark-jobs/silver/delinquance_crimes.py"
 RECENSEMENT_POPULATION_JOB = "/opt/spark-jobs/silver/recensement_population.py"
+LOYERS_LOAD_JOB = "/opt/spark-jobs/load_loyers.py"
 SPARK_CONTAINER = os.environ.get("SPARK_CONTAINER_NAME", "homepedia-spark")
 SPARK_POSTGRES_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
 # Chemins data : tout *_DOWNLOAD_DIR / *_SILVER_DIR / *_REJECTS_DIR est transmis
@@ -65,6 +66,17 @@ def run_delinquance_crimes_spark() -> None:
 
 def run_recensement_population_spark() -> None:
     run_spark_submit(RECENSEMENT_POPULATION_JOB)
+
+
+def run_loyers_load_spark(year: int) -> None:
+    """Charge dans PostgreSQL les indicateurs ANIL téléchargés pour `year`.
+
+    Appelé depuis le DAG download_carte_loyers, en aval de la tâche de
+    téléchargement de la même année. Si cette dernière est skip/échouée
+    (dataset non publié pour l'année), Airflow propage l'état par défaut
+    (trigger_rule=all_success) et cette tâche ne s'exécute pas.
+    """
+    run_spark_submit(LOYERS_LOAD_JOB, ["--year", str(year)])
 
 
 def report_filosofi_income_silver() -> None:
