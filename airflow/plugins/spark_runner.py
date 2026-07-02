@@ -20,11 +20,27 @@ SPARK_POSTGRES_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
 # Chemins data : tout *_DOWNLOAD_DIR / *_SILVER_DIR / *_REJECTS_DIR est transmis
 # au conteneur Spark (POSTGIS/POSTGRES sont déjà définis dans compose.yaml).
 SPARK_ENV_SUFFIXES = ("_DOWNLOAD_DIR", "_SILVER_DIR", "_REJECTS_DIR")
+DEFAULT_SPARK_CONFS = (("spark.sql.shuffle.partitions", "4"),)
 DVF_SPARK_CONFS = (
     ("spark.sql.shuffle.partitions", "8"),
     ("spark.driver.memory", os.environ.get("SPARK_DRIVER_MEMORY", "2g")),
     ("spark.executor.memory", os.environ.get("SPARK_EXECUTOR_MEMORY", "2g")),
 )
+TRUTHY_VALUES = ("1", "true", "yes")
+
+
+def pg_conn_params() -> dict[str, str | int]:
+    return {
+        "host": os.environ.get("POSTGIS_HOST", "postgis"),
+        "port": int(os.environ.get("POSTGIS_PORT", "5432")),
+        "dbname": os.environ.get("POSTGRES_DB", "homepedia"),
+        "user": os.environ.get("POSTGRES_USER", "postgres"),
+        "password": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+    }
+
+
+def env_flag(name: str) -> bool:
+    return os.environ.get(name, "").lower() in TRUTHY_VALUES
 
 
 def spark_env_vars() -> dict[str, str]:
@@ -49,7 +65,7 @@ def run_spark_submit(
         "--jars",
         SPARK_POSTGRES_JAR,
     ]
-    for key, value in extra_confs or (("spark.sql.shuffle.partitions", "4"),):
+    for key, value in extra_confs or DEFAULT_SPARK_CONFS:
         inner.extend(["--conf", f"{key}={value}"])
     inner.append(job_path)
     if extra_args:
@@ -80,7 +96,7 @@ def run_recensement_population_spark() -> None:
 def run_dvf_mutations_spark(year: int, link_plots: bool = False) -> None:
     extra_args = ["--year", str(year)]
     # Liaison plotId activable via env (plots = 94M lignes, opt-in).
-    if link_plots or os.environ.get("DVF_LINK_PLOTS", "").lower() in ("1", "true", "yes"):
+    if link_plots or env_flag("DVF_LINK_PLOTS"):
         extra_args.append("--link-plots")
     run_spark_submit(
         DVF_MUTATIONS_JOB,
@@ -114,13 +130,7 @@ def report_filosofi_income_db() -> None:
         print("psycopg2 indisponible — rapport base ignore")
         return
 
-    conn = psycopg2.connect(
-        host=os.environ.get("POSTGIS_HOST", "postgis"),
-        port=int(os.environ.get("POSTGIS_PORT", "5432")),
-        dbname=os.environ.get("POSTGRES_DB", "homepedia"),
-        user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "postgres"),
-    )
+    conn = psycopg2.connect(**pg_conn_params())
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM income_cities")
@@ -179,13 +189,7 @@ def report_recensement_population_db() -> None:
         print("psycopg2 indisponible — rapport base ignoré")
         return
 
-    conn = psycopg2.connect(
-        host=os.environ.get("POSTGIS_HOST", "postgis"),
-        port=int(os.environ.get("POSTGIS_PORT", "5432")),
-        dbname=os.environ.get("POSTGRES_DB", "homepedia"),
-        user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "postgres"),
-    )
+    conn = psycopg2.connect(**pg_conn_params())
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM populate_cities")
@@ -208,13 +212,7 @@ def report_delinquance_crimes_db() -> None:
         print("psycopg2 indisponible — rapport base ignore")
         return
 
-    conn = psycopg2.connect(
-        host=os.environ.get("POSTGIS_HOST", "postgis"),
-        port=int(os.environ.get("POSTGIS_PORT", "5432")),
-        dbname=os.environ.get("POSTGRES_DB", "homepedia"),
-        user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "postgres"),
-    )
+    conn = psycopg2.connect(**pg_conn_params())
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM crimes_cities")
@@ -250,13 +248,7 @@ def report_dvf_mutations_db() -> None:
         print("psycopg2 indisponible — rapport base ignore")
         return
 
-    conn = psycopg2.connect(
-        host=os.environ.get("POSTGIS_HOST", "postgis"),
-        port=int(os.environ.get("POSTGIS_PORT", "5432")),
-        dbname=os.environ.get("POSTGRES_DB", "homepedia"),
-        user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "postgres"),
-    )
+    conn = psycopg2.connect(**pg_conn_params())
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM mutations")

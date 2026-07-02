@@ -36,9 +36,10 @@ import glob
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import psycopg2
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyspark.sql import DataFrame, SparkSession
@@ -54,6 +55,7 @@ DEFAULT_SILVER = os.environ.get(
 DEFAULT_REJECTS = os.environ.get(
     "DVF_REJECTS_DIR", "/opt/airflow/data/silver/dvf/rejects"
 )
+SPARK_SHUFFLE_PARTITIONS = os.environ.get("DVF_SPARK_SHUFFLE_PARTITIONS", "8")
 
 REQUIRED_COLUMNS = [
     "id_mutation",
@@ -61,6 +63,17 @@ REQUIRED_COLUMNS = [
     "nature_mutation",
     "valeur_fonciere",
 ]
+BRONZE_OPTIONAL_COLUMNS = {
+    "id_parcelle": "string",
+    "type_local": "string",
+    "surface_reelle_bati": "double",
+    "nombre_pieces_principales": "int",
+    "surface_terrain": "double",
+    "longitude": "double",
+    "latitude": "double",
+}
+MUTATIONS_TABLE = "mutations"
+MUTATION_LOCALS_TABLE = "mutation_locals"
 
 # Résolution mutation_locals.plotId via sections.section_key (10 car. indexées)
 # + plots dans la section (idx_plots_section_id). Prérequis :
@@ -163,15 +176,10 @@ def build_silver(bronze: DataFrame) -> tuple[DataFrame, DataFrame, DataFrame]:
         F.to_date(F.col("date_mutation"), "yyyy-MM-dd").alias("date_mutation"),
         F.trim(F.col("nature_mutation")).alias("nature_mutation"),
         to_double("valeur_fonciere").alias("valeur_fonciere"),
-        opt_col(bronze, "id_parcelle", "string").alias("id_parcelle"),
-        opt_col(bronze, "type_local", "string").alias("type_local"),
-        opt_col(bronze, "surface_reelle_bati", "double").alias("surface_reelle_bati"),
-        opt_col(bronze, "nombre_pieces_principales", "int").alias(
-            "nombre_pieces_principales"
+        *(
+            opt_col(bronze, name, kind).alias(name)
+            for name, kind in BRONZE_OPTIONAL_COLUMNS.items()
         ),
-        opt_col(bronze, "surface_terrain", "double").alias("surface_terrain"),
-        opt_col(bronze, "longitude", "double").alias("longitude"),
-        opt_col(bronze, "latitude", "double").alias("latitude"),
     )
 
     # Filtrage métier : uniquement les ventes.
@@ -306,10 +314,13 @@ def delete_mutations_for_years(annees: list[int]) -> None:
     """Supprime les mutations d'une année (cascade sur mutation_locals via FK)."""
     if not annees:
         return
+    sorted_years = sorted(set(annees))
     with psycopg2.connect(**pg_conn_params()) as conn:
         with conn.cursor() as cur:
-            for annee in annees:
-                cur.execute("DELETE FROM mutations WHERE annee = %s", (annee,))
+            for annee in sorted_years:
+                cur.execute(
+                    f"DELETE FROM {MUTATIONS_TABLE} WHERE annee = %s", (annee,)
+                )
         conn.commit()
 
 
@@ -410,6 +421,10 @@ def load_to_db(
 
     Retourne (nb_mutations, nb_locals) chargés.
     """
+    annees = sorted(set(annees))
+    if not annees:
+        return 0, 0
+
     _, _, F, _ = _spark()
     delete_mutations_for_years(annees)
 
@@ -427,7 +442,7 @@ def load_to_db(
     )
     to_load.write.jdbc(
         url=jdbc_url(),
-        table="mutations",
+        table=MUTATIONS_TABLE,
         mode="append",
         properties=jdbc_properties(),
     )
@@ -455,12 +470,27 @@ def load_to_db(
     )
     locals_to_load.write.jdbc(
         url=jdbc_url(),
-        table="mutation_locals",
+        table=MUTATION_LOCALS_TABLE,
         mode="append",
         properties=jdbc_properties(),
     )
 
     return to_load.count(), locals_to_load.count()
+
+
+def parquet_paths(
+    silver_dir: str, rejects_dir: str, year_label: str
+) -> tuple[str, str, str]:
+    return (
+        str(Path(silver_dir) / f"mutations_{year_label}.parquet"),
+        str(Path(silver_dir) / f"locals_{year_label}.parquet"),
+        str(Path(rejects_dir) / f"mutations_{year_label}_rejects.parquet"),
+    )
+
+
+def ensure_output_dirs(*paths: str) -> None:
+    for path in paths:
+        Path(path).mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
@@ -506,7 +536,7 @@ def main() -> None:
     _, SparkSession, _, _ = _spark()
     spark = (
         SparkSession.builder.appName(f"Homepedia-DvfMutations-{year_label}")
-        .config("spark.sql.shuffle.partitions", "8")
+        .config("spark.sql.shuffle.partitions", SPARK_SHUFFLE_PARTITIONS)
         .config("spark.driver.memory", os.environ.get("SPARK_DRIVER_MEMORY", "2g"))
         .config("spark.executor.memory", os.environ.get("SPARK_EXECUTOR_MEMORY", "2g"))
         .getOrCreate()
@@ -524,13 +554,9 @@ def main() -> None:
 
     mutations_df, locals_df, rejects = build_silver(bronze)
 
-    os.makedirs(args.silver_dir, exist_ok=True)
-    os.makedirs(args.rejects_dir, exist_ok=True)
-
-    mutations_parquet = os.path.join(args.silver_dir, f"mutations_{year_label}.parquet")
-    locals_parquet = os.path.join(args.silver_dir, f"locals_{year_label}.parquet")
-    rejects_parquet = os.path.join(
-        args.rejects_dir, f"mutations_{year_label}_rejects.parquet"
+    ensure_output_dirs(args.silver_dir, args.rejects_dir)
+    mutations_parquet, locals_parquet, rejects_parquet = parquet_paths(
+        args.silver_dir, args.rejects_dir, year_label
     )
 
     # Matérialisation Parquet unique, puis relecture pour comptages + chargement.
@@ -563,9 +589,7 @@ def main() -> None:
         loaded_mut, loaded_loc = load_to_db(
             spark, mutations_silver, locals_silver, annees
         )
-        print(
-            f"base : {loaded_mut} mutation(s), {loaded_loc} local(aux) charge(s)"
-        )
+        print(f"base : {loaded_mut} mutation(s), {loaded_loc} local(aux) charge(s)")
 
         if args.link_plots:
             for annee in sorted(annees):

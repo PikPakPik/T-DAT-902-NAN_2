@@ -20,12 +20,15 @@ import psycopg2
 
 BATCH_SIZE = int(os.environ.get("SECTIONS_BACKFILL_BATCH", "50000"))
 
-BACKFILL_SQL = """
+SECTION_KEY_SQL = "lpad(c.code, 5, '0') || s.prefixe || s.code"
+
+BACKFILL_SQL = f"""
 UPDATE sections s
-SET section_key = lpad(c.code, 5, '0') || s.prefixe || s.code
+SET section_key = {SECTION_KEY_SQL}
 FROM cities c
 WHERE s."cityId" = c.id
   AND s.id >= %s AND s.id < %s
+  AND s.section_key IS DISTINCT FROM {SECTION_KEY_SQL}
 """
 
 
@@ -44,46 +47,43 @@ def log(msg: str) -> None:
 
 
 def main() -> None:
-    conn = psycopg2.connect(**pg_conn_params())
-    conn.autocommit = True
-    cur = conn.cursor()
+    with psycopg2.connect(**pg_conn_params()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT min(id), max(id), count(*) FROM sections")
+            min_id, max_id, total = cur.fetchone()
+            if not total:
+                log("Aucune section — rien à faire.")
+                return
+            log(f"sections : {total} lignes, id de {min_id} à {max_id}")
 
-    cur.execute("SELECT min(id), max(id), count(*) FROM sections")
-    min_id, max_id, total = cur.fetchone()
-    if not total:
-        log("Aucune section — rien à faire.")
-        return
-    log(f"sections : {total} lignes, id de {min_id} à {max_id}")
+            start = time.time()
+            updated_total = 0
+            span = max_id - min_id + 1
+            lo = min_id
+            while lo <= max_id:
+                hi = lo + BATCH_SIZE
+                t0 = time.time()
+                cur.execute(BACKFILL_SQL, (lo, hi))
+                conn.commit()
 
-    start = time.time()
-    updated_total = 0
-    span = max_id - min_id + 1
-    lo = min_id
-    while lo <= max_id:
-        hi = lo + BATCH_SIZE
-        t0 = time.time()
-        cur.execute(BACKFILL_SQL, (lo, hi))
-        updated = cur.rowcount
-        updated_total += updated
-        done = min(hi, max_id + 1) - min_id
-        pct = 100.0 * done / span
-        elapsed = time.time() - start
-        remaining = (span - done) / (done / elapsed) if done > 0 else 0
-        log(
-            f"id [{lo};{hi}) : {updated} maj en {time.time()-t0:.1f}s | "
-            f"{pct:.1f}% | ETA {remaining:.0f}s"
-        )
-        lo = hi
+                updated = cur.rowcount
+                updated_total += updated
+                done = min(hi, max_id + 1) - min_id
+                pct = 100.0 * done / span
+                elapsed = time.time() - start
+                remaining = (span - done) / (done / elapsed) if done > 0 else 0
+                log(
+                    f"id [{lo};{hi}) : {updated} maj en {time.time()-t0:.1f}s | "
+                    f"{pct:.1f}% | ETA {remaining:.0f}s"
+                )
+                lo = hi
 
-    cur.execute("SELECT count(*) FROM sections WHERE section_key IS NOT NULL")
-    filled = cur.fetchone()[0]
-    log(
-        f"Termine : {filled}/{total} section_key en "
-        f"{time.time()-start:.1f}s"
-    )
-
-    cur.close()
-    conn.close()
+            cur.execute("SELECT count(*) FROM sections WHERE section_key IS NOT NULL")
+            filled = cur.fetchone()[0]
+            log(
+                f"Termine : {filled}/{total} section_key, "
+                f"{updated_total} maj en {time.time()-start:.1f}s"
+            )
 
 
 if __name__ == "__main__":

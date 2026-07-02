@@ -4,7 +4,11 @@ import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+
+try:
+    from airflow.providers.standard.operators.python import PythonOperator
+except ImportError:
+    from airflow.operators.python import PythonOperator
 
 from download_utils import download_to_path
 from spark_runner import (
@@ -19,6 +23,12 @@ START_YEAR = int(os.environ.get("DVF_START_YEAR", "2021"))
 END_YEAR = int(os.environ.get("DVF_END_YEAR", str(datetime.now().year - 1)))
 YEARS = list(range(START_YEAR, END_YEAR + 1))
 
+if not YEARS:
+    raise ValueError(
+        f"DVF_START_YEAR ({START_YEAR}) must be lower than or equal to "
+        f"DVF_END_YEAR ({END_YEAR})"
+    )
+
 
 def download_dvf(year: int) -> None:
     url = f"{BASE_URL}/{year}/full.csv.gz"
@@ -27,8 +37,14 @@ def download_dvf(year: int) -> None:
 
 
 def report_downloads() -> None:
+    if not os.path.isdir(DOWNLOAD_DIR):
+        print(f"No DVF file downloaded yet in {DOWNLOAD_DIR}")
+        return
+
     files = sorted(f for f in os.listdir(DOWNLOAD_DIR) if f.endswith(".csv.gz"))
-    total_mb = sum(os.path.getsize(os.path.join(DOWNLOAD_DIR, f)) for f in files) / (1024 * 1024)
+    total_mb = sum(
+        os.path.getsize(os.path.join(DOWNLOAD_DIR, f)) for f in files
+    ) / (1024 * 1024)
     print(f"{len(files)} DVF files in {DOWNLOAD_DIR} ({total_mb:.2f} MB total):")
     for f in files:
         print(f"  - {f}")
