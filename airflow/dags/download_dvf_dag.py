@@ -7,6 +7,11 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from download_utils import download_to_path
+from spark_runner import (
+    report_dvf_mutations_db,
+    report_dvf_mutations_silver,
+    run_dvf_mutations_spark,
+)
 
 BASE_URL = "https://files.data.gouv.fr/geo-dvf/latest/csv"
 DOWNLOAD_DIR = os.environ.get("DVF_DOWNLOAD_DIR", "/opt/airflow/data/dvf")
@@ -31,7 +36,7 @@ def report_downloads() -> None:
 
 with DAG(
     dag_id="download_dvf",
-    description="Telecharge les fichiers full.csv.gz DVF (geo-dvf) depuis files.data.gouv.fr",
+    description="Telecharge et nettoie les fichiers DVF (geo-dvf) puis charge la table mutations via Spark",
     start_date=datetime(2026, 1, 1),
     schedule="@monthly",
     catchup=False,
@@ -41,18 +46,45 @@ with DAG(
     },
     tags=["homepedia", "ingestion", "dvf"],
 ) as dag:
-    downloads = [
-        PythonOperator(
+    downloads = {
+        year: PythonOperator(
             task_id=f"download_dvf_{year}",
             python_callable=download_dvf,
             op_kwargs={"year": year},
         )
         for year in YEARS
-    ]
+    }
+
+    transforms = {
+        year: PythonOperator(
+            task_id=f"transform_dvf_mutations_{year}",
+            python_callable=run_dvf_mutations_spark,
+            op_kwargs={"year": year},
+        )
+        for year in YEARS
+    }
 
     report = PythonOperator(
         task_id="report_downloads",
         python_callable=report_downloads,
+        trigger_rule="all_done",
     )
 
-    downloads >> report
+    report_silver_task = PythonOperator(
+        task_id="report_dvf_mutations_silver",
+        python_callable=report_dvf_mutations_silver,
+        trigger_rule="all_done",
+    )
+
+    report_gold_task = PythonOperator(
+        task_id="report_dvf_mutations_db",
+        python_callable=report_dvf_mutations_db,
+        trigger_rule="all_done",
+    )
+
+    # Téléchargements en parallèle, puis Spark année par année (évite OOM).
+    list(downloads.values()) >> transforms[YEARS[0]]
+    for prev_year, next_year in zip(YEARS, YEARS[1:]):
+        transforms[prev_year] >> transforms[next_year]
+
+    transforms[YEARS[-1]] >> [report, report_silver_task, report_gold_task]

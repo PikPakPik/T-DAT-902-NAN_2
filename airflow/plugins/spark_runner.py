@@ -14,11 +14,17 @@ import sys
 FILOSOFI_INCOME_JOB = "/opt/spark-jobs/silver/filosofi_income.py"
 DELINQUANCE_CRIMES_JOB = "/opt/spark-jobs/silver/delinquance_crimes.py"
 RECENSEMENT_POPULATION_JOB = "/opt/spark-jobs/silver/recensement_population.py"
+DVF_MUTATIONS_JOB = "/opt/spark-jobs/silver/dvf_mutations.py"
 SPARK_CONTAINER = os.environ.get("SPARK_CONTAINER_NAME", "homepedia-spark")
 SPARK_POSTGRES_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
 # Chemins data : tout *_DOWNLOAD_DIR / *_SILVER_DIR / *_REJECTS_DIR est transmis
 # au conteneur Spark (POSTGIS/POSTGRES sont déjà définis dans compose.yaml).
 SPARK_ENV_SUFFIXES = ("_DOWNLOAD_DIR", "_SILVER_DIR", "_REJECTS_DIR")
+DVF_SPARK_CONFS = (
+    ("spark.sql.shuffle.partitions", "8"),
+    ("spark.driver.memory", os.environ.get("SPARK_DRIVER_MEMORY", "2g")),
+    ("spark.executor.memory", os.environ.get("SPARK_EXECUTOR_MEMORY", "2g")),
+)
 
 
 def spark_env_vars() -> dict[str, str]:
@@ -30,7 +36,11 @@ def spark_env_vars() -> dict[str, str]:
     }
 
 
-def run_spark_submit(job_path: str, extra_args: list[str] | None = None) -> None:
+def run_spark_submit(
+    job_path: str,
+    extra_args: list[str] | None = None,
+    extra_confs: tuple[tuple[str, str], ...] | None = None,
+) -> None:
     master = os.environ.get("SPARK_MASTER", "local[*]")
     inner = [
         "/opt/spark/bin/spark-submit",
@@ -38,10 +48,10 @@ def run_spark_submit(job_path: str, extra_args: list[str] | None = None) -> None
         master,
         "--jars",
         SPARK_POSTGRES_JAR,
-        "--conf",
-        "spark.sql.shuffle.partitions=4",
-        job_path,
     ]
+    for key, value in extra_confs or (("spark.sql.shuffle.partitions", "4"),):
+        inner.extend(["--conf", f"{key}={value}"])
+    inner.append(job_path)
     if extra_args:
         inner.extend(extra_args)
 
@@ -65,6 +75,18 @@ def run_delinquance_crimes_spark() -> None:
 
 def run_recensement_population_spark() -> None:
     run_spark_submit(RECENSEMENT_POPULATION_JOB)
+
+
+def run_dvf_mutations_spark(year: int, link_plots: bool = False) -> None:
+    extra_args = ["--year", str(year)]
+    # Liaison plotId activable via env (plots = 94M lignes, opt-in).
+    if link_plots or os.environ.get("DVF_LINK_PLOTS", "").lower() in ("1", "true", "yes"):
+        extra_args.append("--link-plots")
+    run_spark_submit(
+        DVF_MUTATIONS_JOB,
+        extra_args=extra_args,
+        extra_confs=DVF_SPARK_CONFS,
+    )
 
 
 def report_filosofi_income_silver() -> None:
@@ -204,5 +226,52 @@ def report_delinquance_crimes_db() -> None:
         print(f"crimes_cities : {total} ligne(s) en base")
         for annee, n in by_year:
             print(f"  annee {annee}: {n}")
+    finally:
+        conn.close()
+
+
+def report_dvf_mutations_silver() -> None:
+    silver_dir = os.environ.get(
+        "DVF_SILVER_DIR", "/opt/airflow/data/silver/dvf/mutations"
+    )
+    if not os.path.isdir(silver_dir):
+        print(f"Aucune donnee silver dans {silver_dir}")
+        return
+    for name in sorted(os.listdir(silver_dir)):
+        path = os.path.join(silver_dir, name)
+        if name.endswith(".parquet") and os.path.isdir(path):
+            print(f"{name}/ (Parquet)")
+
+
+def report_dvf_mutations_db() -> None:
+    try:
+        import psycopg2
+    except ImportError:
+        print("psycopg2 indisponible — rapport base ignore")
+        return
+
+    conn = psycopg2.connect(
+        host=os.environ.get("POSTGIS_HOST", "postgis"),
+        port=int(os.environ.get("POSTGIS_PORT", "5432")),
+        dbname=os.environ.get("POSTGRES_DB", "homepedia"),
+        user=os.environ.get("POSTGRES_USER", "postgres"),
+        password=os.environ.get("POSTGRES_PASSWORD", "postgres"),
+    )
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM mutations")
+            total = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM mutation_locals")
+            total_locals = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM mutation_locals WHERE "plotId" IS NOT NULL')
+            with_plot = cur.fetchone()[0]
+            cur.execute(
+                "SELECT annee, COUNT(*) FROM mutations GROUP BY annee ORDER BY annee"
+            )
+            by_year = cur.fetchall()
+        print(f"mutations : {total} vente(s) en base")
+        print(f"mutation_locals : {total_locals} lot(s) ({with_plot} lie(s) a une parcelle)")
+        for annee, n in by_year:
+            print(f"  annee {annee}: {n} vente(s)")
     finally:
         conn.close()
