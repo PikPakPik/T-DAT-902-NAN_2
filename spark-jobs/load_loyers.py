@@ -5,7 +5,7 @@ Usage:
   spark-submit /opt/spark-jobs/load_loyers.py [--year YYYY] [--data-dir PATH]
 
 Variables d'environnement:
-  LOYERS_YEAR, LOYERS_DATA_DIR, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+  LOYERS_YEAR, LOYERS_DATA_DIR, POSTGIS_HOST, POSTGIS_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ import logging
 import os
 import sys
 
+import psycopg2
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, lit, lpad, regexp_replace, trim
 from pyspark.sql.types import DoubleType, IntegerType
@@ -58,17 +59,39 @@ def build_spark() -> SparkSession:
     )
 
 
-def jdbc_config() -> tuple[str, dict[str, str]]:
-    user = os.getenv("POSTGRES_USER", "postgres")
-    password = os.getenv("POSTGRES_PASSWORD", "postgres")
-    database = os.getenv("POSTGRES_DB", "homepedia")
-    url = f"jdbc:postgresql://postgis:5432/{database}"
-    props = {
-        "user": user,
-        "password": password,
+# --- BLOC DE CONNEXION ---
+def pg_conn_params() -> dict[str, str | int]:
+    return {
+        "host": os.environ.get("POSTGIS_HOST", "postgis"),
+        "port": int(os.environ.get("POSTGIS_PORT", "5432")),
+        "dbname": os.environ.get("POSTGRES_DB", "homepedia"),
+        "user": os.environ.get("POSTGRES_USER", "postgres"),
+        "password": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+    }
+
+
+def jdbc_url() -> str:
+    p = pg_conn_params()
+    return f"jdbc:postgresql://{p['host']}:{p['port']}/{p['dbname']}"
+
+
+def jdbc_properties() -> dict[str, str]:
+    p = pg_conn_params()
+    return {
+        "user": str(p["user"]),
+        "password": str(p["password"]),
         "driver": "org.postgresql.Driver",
     }
-    return url, props
+
+
+def delete_rents_for_year(annee: int) -> None:
+    """Supprime les loyers existants via psycopg2 (Idempotence)."""
+    with psycopg2.connect(**pg_conn_params()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM rents WHERE annee = %s", (annee,))
+        conn.commit()
+    logger.info("Suppression des loyers existants effectuée pour l'année %s", annee)
+# --------------------------------------------------------
 
 
 def find_csv(year_dir: str, suffix: str) -> str:
@@ -136,30 +159,15 @@ def merge_indicators(spark: SparkSession, year_dir: str) -> DataFrame:
     return merged
 
 
-def load_cities(spark: SparkSession, jdbc_url: str, props: dict[str, str]) -> DataFrame:
+def load_cities(spark: SparkSession) -> DataFrame:
     return (
         spark.read.jdbc(
-            url=jdbc_url,
+            url=jdbc_url(),
             table="(SELECT id, code FROM cities) AS cities_ref",
-            properties=props,
+            properties=jdbc_properties(),
         )
         .withColumn("code", lpad(trim(col("code").cast("string")), 5, "0"))
     )
-
-
-def delete_year_rows(spark: SparkSession, jdbc_url: str, props: dict[str, str], year: int) -> None:
-    conn = spark._jvm.java.sql.DriverManager.getConnection(
-        jdbc_url, props["user"], props["password"]
-    )
-    stmt = None
-    try:
-        stmt = conn.createStatement()
-        deleted = stmt.executeUpdate(f'DELETE FROM rents WHERE "annee" = {int(year)}')
-        logger.info("Suppression des loyers existants pour %s : %d ligne(s)", year, deleted)
-    finally:
-        if stmt is not None:
-            stmt.close()
-        conn.close()
 
 
 def log_unmatched_communes(unmatched: DataFrame) -> None:
@@ -193,9 +201,8 @@ def main() -> int:
     spark.sparkContext.setLogLevel("WARN")
 
     try:
-        jdbc_url, jdbc_props = jdbc_config()
         loyers = merge_indicators(spark, year_dir)
-        cities = load_cities(spark, jdbc_url, jdbc_props)
+        cities = load_cities(spark)
 
         joined = loyers.join(cities, loyers.code_insee == cities.code, how="left")
         unmatched = joined.filter(col("id").isNull())
@@ -220,14 +227,16 @@ def main() -> int:
             logger.warning("Aucune ligne à charger pour %s", args.year)
             return 0
 
-        delete_year_rows(spark, jdbc_url, jdbc_props, args.year)
+        # Nettoyage sécurisé via psycopg2 avant l'insertion
+        delete_rents_for_year(args.year)
 
+        # Insertion finale dans la base de données
         (
             to_write.write.jdbc(
-                url=jdbc_url,
+                url=jdbc_url(),
                 table="rents",
                 mode="append",
-                properties=jdbc_props,
+                properties=jdbc_properties(),
             )
         )
         logger.info("Chargement terminé : %d ligne(s) insérée(s) pour %s", row_count, args.year)

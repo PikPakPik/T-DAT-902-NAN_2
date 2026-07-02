@@ -115,4 +115,4 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    downloads >> load_tasks >> report
+    load_tasks >> report
