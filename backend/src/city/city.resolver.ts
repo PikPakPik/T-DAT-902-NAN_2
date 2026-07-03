@@ -1,6 +1,11 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { MapBoundsInput } from '../department/bounds.input';
-import { CityType, PopulationStatsType } from './city.object-type';
+import {
+  CityType,
+  CrimeStatsType,
+  PopulationStatsType,
+  RentStatsType,
+} from './city.object-type';
 import { CityService } from './city.service';
 
 @Resolver(() => CityType)
@@ -39,5 +44,50 @@ export class CityResolver {
     @Args('code', { description: 'Code INSEE commune' }) code: string,
   ): Promise<PopulationStatsType[]> {
     return this.cityService.findPopulationHistoryByCode(code);
+  }
+
+  @Query(() => CrimeStatsType, {
+    name: 'cityCrime',
+    nullable: true,
+    description:
+      'Statistiques de criminalite les plus recentes pour une commune',
+  })
+  cityCrime(
+    @Args('code', { description: 'Code INSEE commune' }) code: string,
+  ): Promise<CrimeStatsType | null> {
+    return this.cityService.findLatestCrimeByCode(code);
+  }
+
+  @Query(() => [CrimeStatsType], {
+    name: 'cityCrimeHistory',
+    description:
+      'Historique des statistiques de criminalite pour une commune, toutes annees disponibles',
+  })
+  cityCrimeHistory(
+    @Args('code', { description: 'Code INSEE commune' }) code: string,
+  ): Promise<CrimeStatsType[]> {
+    return this.cityService.findCrimeHistoryByCode(code);
+  }
+
+  @Query(() => RentStatsType, {
+    name: 'cityRent',
+    nullable: true,
+    description: 'Statistiques de loyers les plus recentes pour une commune',
+  })
+  cityRent(
+    @Args('code', { description: 'Code INSEE commune' }) code: string,
+  ): Promise<RentStatsType | null> {
+    return this.cityService.findLatestRentByCode(code);
+  }
+
+  @Query(() => [RentStatsType], {
+    name: 'cityRentHistory',
+    description:
+      'Historique des statistiques de loyers pour une commune, toutes annees disponibles',
+  })
+  cityRentHistory(
+    @Args('code', { description: 'Code INSEE commune' }) code: string,
+  ): Promise<RentStatsType[]> {
+    return this.cityService.findRentHistoryByCode(code);
   }
 }

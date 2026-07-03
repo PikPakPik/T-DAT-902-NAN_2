@@ -38,6 +38,18 @@
       scope="Population"
       [entries]="densityLegend"
     />
+    <map-legend
+      [visible]="activeFilter() === 'criminalite' && mapLegendVisible()"
+      title="Criminalité"
+      scope="Score agrégé"
+      [entries]="criminalityLegend"
+    />
+    <map-legend
+      [visible]="activeFilter() === 'loyer' && mapLegendVisible()"
+      title="Loyers"
+      scope="Appartement"
+      [entries]="rentLegend"
+    />
   }
 
   <city-detail-panel
@@ -48,6 +60,10 @@
     [insights]="cityInsights()"
     [population]="cityPopulation()"
     [populationHistory]="cityPopulationHistory()"
+    [crime]="cityCrime()"
+    [crimeHistory]="cityCrimeHistory()"
+    [rent]="cityRent()"
+    [rentHistory]="cityRentHistory()"
     (closed)="onPanelClosed()"
   />
 

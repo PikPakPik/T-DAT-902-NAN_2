@@ -33,6 +33,7 @@ DEFAULT_SILVER = os.environ.get("DPE_SILVER_DIR", "/opt/airflow/data/silver/dpe/
 DEFAULT_REJECTS = os.environ.get(
     "DPE_REJECTS_DIR", "/opt/airflow/data/silver/dpe/rejects"
 )
+DPE_OUTPUT_PARTITIONS = int(os.environ.get("DPE_OUTPUT_PARTITIONS", "128"))
 
 DPES_TABLE = "dpes"
 STAGING_TABLE = "stg_dpes_ademe"
@@ -145,6 +146,14 @@ def coalesced_surface(df: DataFrame):
     return F.coalesce(*columns)
 
 
+def quoted_sql_identifier(name: str) -> str:
+    return f"`{name.replace('`', '``')}`"
+
+
+def year_from_date_column(column_name: str):
+    return F.year(F.expr(f"try_cast({quoted_sql_identifier(column_name)} as date)"))
+
+
 def read_dpe_csv(spark: SparkSession, path: str) -> DataFrame:
     df = (
         spark.read.option("header", True)
@@ -166,7 +175,7 @@ def read_dpe_csv(spark: SparkSession, path: str) -> DataFrame:
 
     return df.select(
         clean_string(F.col(dpe_id_col)).alias("dpe_id"),
-        F.year(F.to_date(clean_string(F.col(date_col)))).alias("annee"),
+        year_from_date_column(date_col).alias("annee"),
         F.upper(clean_string(F.col(energy_col))).alias("classe_energie"),
         F.upper(clean_string(F.col(ges_col))).alias("classe_ges"),
         coalesced_surface(df).alias("surface_habitable"),
@@ -504,9 +513,17 @@ def main() -> None:
 
     spark = (
         SparkSession.builder.appName("Homepedia-DpeLoad")
-        .config("spark.sql.shuffle.partitions", os.environ.get("DPE_SHUFFLE_PARTITIONS", "8"))
-        .config("spark.driver.memory", os.environ.get("SPARK_DRIVER_MEMORY", "2g"))
-        .config("spark.executor.memory", os.environ.get("SPARK_EXECUTOR_MEMORY", "2g"))
+        .config("spark.sql.shuffle.partitions", os.environ.get("DPE_SHUFFLE_PARTITIONS", "128"))
+        .config("spark.default.parallelism", os.environ.get("DPE_DEFAULT_PARALLELISM", "128"))
+        .config(
+            "spark.driver.memory",
+            os.environ.get("DPE_DRIVER_MEMORY", os.environ.get("SPARK_DRIVER_MEMORY", "4g")),
+        )
+        .config(
+            "spark.executor.memory",
+            os.environ.get("DPE_EXECUTOR_MEMORY", os.environ.get("SPARK_EXECUTOR_MEMORY", "4g")),
+        )
+        .config("spark.sql.parquet.enableDictionary", "false")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
@@ -519,8 +536,18 @@ def main() -> None:
     silver_path = str(Path(args.silver_dir) / "dpes_ademe.parquet")
     rejects_path = str(Path(args.rejects_dir) / "dpes_ademe_rejects.parquet")
 
-    silver.write.mode("overwrite").parquet(silver_path)
-    rejects.write.mode("overwrite").parquet(rejects_path)
+    (
+        silver.coalesce(DPE_OUTPUT_PARTITIONS)
+        .write.mode("overwrite")
+        .option("parquet.enable.dictionary", "false")
+        .parquet(silver_path)
+    )
+    (
+        rejects.coalesce(DPE_OUTPUT_PARTITIONS)
+        .write.mode("overwrite")
+        .option("parquet.enable.dictionary", "false")
+        .parquet(rejects_path)
+    )
 
     silver_df = spark.read.parquet(silver_path)
     rejects_df = spark.read.parquet(rejects_path)

@@ -1,4 +1,14 @@
-import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CityDetailPanelComponent } from './components/city-detail-panel/city-detail-panel.component';
 import { MapLegendComponent } from './components/map-legend/map-legend.component';
 import { MapFilterPanelComponent } from './components/map-filter-panel/map-filter-panel.component';
@@ -6,11 +16,27 @@ import { PlotDetailPanelComponent } from './components/plot-detail-panel/plot-de
 import type { MapFilterId } from './models/map-filter.model';
 import { PRICE_LEGEND } from './overlays/shared/price-colors';
 import { DENSITY_LEGEND } from './overlays/shared/density-colors';
+import { CRIMINALITY_LEGEND } from './overlays/shared/criminality-colors';
+import { RENT_LEGEND } from './overlays/shared/rent-colors';
 import { MapboxMapFacade, type PriceLegendScope } from './core/mapbox-map.facade';
 import type { SelectedCity } from './models/selected-city.model';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
-import { CityInsightsGraphqlService, type CityInsightsGql } from './services/graphql/city-insights-graphql.service';
-import { CityPopulationGraphqlService, type CityPopulationGql } from './services/graphql/city-population-graphql.service';
+import {
+  CityCrimeGraphqlService,
+  type CityCrimeGql,
+} from './services/graphql/city-crime-graphql.service';
+import {
+  CityInsightsGraphqlService,
+  type CityInsightsGql,
+} from './services/graphql/city-insights-graphql.service';
+import {
+  CityPopulationGraphqlService,
+  type CityPopulationGql,
+} from './services/graphql/city-population-graphql.service';
+import {
+  CityRentGraphqlService,
+  type CityRentGql,
+} from './services/graphql/city-rent-graphql.service';
 import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
 import { MapGraphqlSmokeService } from './services/graphql/map-graphql-smoke.service';
 import { PlotsGraphqlService, type PlotDetailsGql } from './services/graphql/plots-graphql.service';
@@ -42,10 +68,14 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly graphqlStatus = signal<'idle' | 'loading' | 'ok' | 'error'>('idle');
   readonly graphqlInfo = signal('');
   readonly graphqlHttpInfo = signal('');
-  readonly isLoading = computed(() => this.graphqlStatus() === 'idle' || this.graphqlStatus() === 'loading');
+  readonly isLoading = computed(
+    () => this.graphqlStatus() === 'idle' || this.graphqlStatus() === 'loading',
+  );
   readonly activeFilter = signal<MapFilterId>('prix_m2');
   readonly priceLegend = PRICE_LEGEND;
   readonly densityLegend = DENSITY_LEGEND;
+  readonly criminalityLegend = CRIMINALITY_LEGEND;
+  readonly rentLegend = RENT_LEGEND;
   readonly legendScope = signal('France');
   readonly mapLegendVisible = signal(true);
   readonly priceLegendLabels = signal<PriceLegendLabels>({
@@ -64,6 +94,10 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly cityInsights = signal<CityInsightsGql | null>(null);
   readonly cityPopulation = signal<CityPopulationGql | null>(null);
   readonly cityPopulationHistory = signal<CityPopulationGql[]>([]);
+  readonly cityCrime = signal<CityCrimeGql | null>(null);
+  readonly cityCrimeHistory = signal<CityCrimeGql[]>([]);
+  readonly cityRent = signal<CityRentGql | null>(null);
+  readonly cityRentHistory = signal<CityRentGql[]>([]);
   readonly insightsLoading = signal(false);
   readonly insightsError = signal<string | null>(null);
   readonly selectedPlot = signal<PlotDetailsGql | null>(null);
@@ -83,8 +117,10 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   #sectionsGraphql = inject(SectionsGraphqlService);
   #plotsGraphql = inject(PlotsGraphqlService);
   #priceLegendGraphql = inject(PriceLegendGraphqlService);
+  #cityCrimeGraphql = inject(CityCrimeGraphqlService);
   #cityInsightsGraphql = inject(CityInsightsGraphqlService);
   #cityPopulationGraphql = inject(CityPopulationGraphqlService);
+  #cityRentGraphql = inject(CityRentGraphqlService);
   #ngZone = inject(NgZone);
 
   ngAfterViewInit(): void {
@@ -156,27 +192,38 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.cityInsights.set(null);
     this.cityPopulation.set(null);
     this.cityPopulationHistory.set([]);
+    this.cityCrime.set(null);
+    this.cityCrimeHistory.set([]);
+    this.cityRent.set(null);
+    this.cityRentHistory.set([]);
     this.insightsError.set(null);
     this.insightsLoading.set(true);
 
     const seq = ++this.#insightsRequestSeq;
 
     try {
-      const [insights, population, history] = await Promise.all([
-        this.#cityInsightsGraphql.fetchByCode(city.code),
-        this.#cityPopulationGraphql.fetchByCode(city.code),
-        this.#cityPopulationGraphql.fetchHistoryByCode(city.code),
-      ]);
+      const [insights, population, history, crime, crimeHistory, rent, rentHistory] =
+        await Promise.all([
+          this.#cityInsightsGraphql.fetchByCode(city.code),
+          this.#cityPopulationGraphql.fetchByCode(city.code),
+          this.#cityPopulationGraphql.fetchHistoryByCode(city.code),
+          this.#cityCrimeGraphql.fetchByCode(city.code),
+          this.#cityCrimeGraphql.fetchHistoryByCode(city.code),
+          this.#cityRentGraphql.fetchByCode(city.code),
+          this.#cityRentGraphql.fetchHistoryByCode(city.code),
+        ]);
       if (seq !== this.#insightsRequestSeq) return;
       this.cityInsights.set(insights);
       this.cityPopulation.set(population);
       this.cityPopulationHistory.set(history);
+      this.cityCrime.set(crime);
+      this.cityCrimeHistory.set(crimeHistory);
+      this.cityRent.set(rent);
+      this.cityRentHistory.set(rentHistory);
     } catch (error) {
       if (seq !== this.#insightsRequestSeq) return;
       const message =
-        error instanceof Error
-          ? error.message
-          : "Impossible de charger l’analyse textuelle.";
+        error instanceof Error ? error.message : 'Impossible de charger l’analyse textuelle.';
       this.insightsError.set(message);
     } finally {
       if (seq === this.#insightsRequestSeq) {
@@ -205,9 +252,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     } catch (error) {
       if (seq !== this.#plotRequestSeq) return;
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Impossible de charger les ventes de la parcelle.';
+        error instanceof Error ? error.message : 'Impossible de charger les ventes de la parcelle.';
       this.plotError.set(message);
     } finally {
       if (seq === this.#plotRequestSeq) {

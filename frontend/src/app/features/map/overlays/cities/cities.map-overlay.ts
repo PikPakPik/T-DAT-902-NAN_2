@@ -1,16 +1,12 @@
 import * as mapboxgl from 'mapbox-gl';
-import {
-  getPolygonFeatureBounds,
-  getPolygonFeatureCenter,
-} from '../map-overlay-geo';
+import { getPolygonFeatureBounds, getPolygonFeatureCenter } from '../map-overlay-geo';
 import type { MapboxOverlay, MapOverlayContext } from '../map-overlay.types';
 import { MAP_SECTIONS_MIN_ZOOM } from '../../constants/map-view.constants';
 import type { CitiesFeatureCollection } from '../../services/graphql/cities-graphql.service';
-import {
-  adminFillColorExpression,
-  formatPriceM2,
-} from '../shared/price-colors';
+import { adminFillColorExpression, formatPriceM2 } from '../shared/price-colors';
 import { densityFillColorExpression } from '../shared/density-colors';
+import { criminalityFillColorExpression } from '../shared/criminality-colors';
+import { rentFillColorExpression } from '../shared/rent-colors';
 import type { MapFilterId } from '../../models/map-filter.model';
 
 const CITIES_SOURCE_ID = 'cities-fr';
@@ -22,11 +18,7 @@ const EMPTY_COLLECTION: CitiesFeatureCollection = {
   features: [],
 };
 
-export type CitySelectHandler = (city: {
-  id: number;
-  name: string;
-  code: string;
-}) => void;
+export type CitySelectHandler = (city: { id: number; name: string; code: string }) => void;
 
 export class CitiesMapOverlay implements MapboxOverlay {
   #geoJson: CitiesFeatureCollection = EMPTY_COLLECTION;
@@ -79,7 +71,11 @@ export class CitiesMapOverlay implements MapboxOverlay {
     const expression =
       key === 'densite'
         ? densityFillColorExpression()
-        : adminFillColorExpression();
+        : key === 'criminalite'
+          ? criminalityFillColorExpression()
+          : key === 'loyer'
+            ? rentFillColorExpression()
+            : adminFillColorExpression();
 
     map.setPaintProperty(CITIES_FILL_LAYER_ID, 'fill-color', expression);
   }
@@ -102,10 +98,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
     }
 
     if (this.#hoveredCityId != null && map) {
-      map.setFeatureState(
-        { source: CITIES_SOURCE_ID, id: this.#hoveredCityId },
-        { hover: false },
-      );
+      map.setFeatureState({ source: CITIES_SOURCE_ID, id: this.#hoveredCityId }, { hover: false });
     }
     this.#popup?.remove();
     this.#hoveredCityId = undefined;
@@ -150,12 +143,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
         source: CITIES_SOURCE_ID,
         paint: {
           'fill-color': adminFillColorExpression(),
-          'fill-opacity': [
-            'case',
-            ['boolean', ['feature-state', 'hover'], false],
-            0.92,
-            0.78,
-          ],
+          'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.92, 0.78],
         },
       });
     }
@@ -177,9 +165,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
     const map = this.#map;
     if (!map) return;
 
-    const source = map.getSource(CITIES_SOURCE_ID) as
-      | mapboxgl.GeoJSONSource
-      | undefined;
+    const source = map.getSource(CITIES_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
     source?.setData(this.#geoJson);
   }
 
@@ -212,10 +198,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
 
       this.#hoveredCityId = feature.id as string | number | undefined;
       if (this.#hoveredCityId != null) {
-        map.setFeatureState(
-          { source: CITIES_SOURCE_ID, id: this.#hoveredCityId },
-          { hover: true },
-        );
+        map.setFeatureState({ source: CITIES_SOURCE_ID, id: this.#hoveredCityId }, { hover: true });
       }
 
       map.getCanvas().style.cursor = 'pointer';
@@ -224,16 +207,11 @@ export class CitiesMapOverlay implements MapboxOverlay {
       if (!center) return;
 
       const name = feature.properties?.['name'] ?? 'Commune';
-      const metricLabel =
-        this.#activeChoropleth === 'densite'
-          ? this.#formatDensity(this.#numberProperty(feature, 'densite'))
-          : formatPriceM2(this.#numberProperty(feature, 'prixMedianM2'));
+      const metricLabel = this.#formatActiveMetric(feature);
 
       this.#popup
         ?.setLngLat(center)
-        .setHTML(
-          `<div><strong>${name}</strong><br/><span>${metricLabel}</span></div>`,
-        )
+        .setHTML(`<div><strong>${name}</strong><br/><span>${metricLabel}</span></div>`)
         .addTo(map);
     };
 
@@ -300,12 +278,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
   ): { id: number; name: string; code: string } | null {
     const props = feature.properties ?? {};
     const idRaw = feature.id ?? props['id'];
-    const cityId =
-      typeof idRaw === 'number'
-        ? idRaw
-        : idRaw != null
-          ? Number(idRaw)
-          : NaN;
+    const cityId = typeof idRaw === 'number' ? idRaw : idRaw != null ? Number(idRaw) : NaN;
     if (!Number.isFinite(cityId)) return null;
 
     let name = String(props['name'] ?? '');
@@ -313,8 +286,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
 
     if (!name || !code) {
       const match = this.#geoJson.features.find(
-        (entry) =>
-          entry.id === cityId || entry.properties?.id === cityId,
+        (entry) => entry.id === cityId || entry.properties?.id === cityId,
       );
       if (match?.properties) {
         name = name || String(match.properties.name ?? '');
@@ -349,6 +321,42 @@ export class CitiesMapOverlay implements MapboxOverlay {
     return `${Math.round(value).toLocaleString('fr-FR')} hab/km²`;
   }
 
+  #formatCriminality(value: number | null): string {
+    if (value == null || value <= 0) {
+      return 'Données indisponibles';
+    }
+
+    return `Score criminalité ${value.toLocaleString('fr-FR', {
+      maximumFractionDigits: 1,
+    })}`;
+  }
+
+  #formatRent(value: number | null): string {
+    if (value == null || value <= 0) {
+      return 'Données indisponibles';
+    }
+
+    return `${value.toLocaleString('fr-FR', {
+      maximumFractionDigits: 2,
+    })} €/m²`;
+  }
+
+  #formatActiveMetric(feature: GeoJSON.Feature): string {
+    if (this.#activeChoropleth === 'densite') {
+      return this.#formatDensity(this.#numberProperty(feature, 'densite'));
+    }
+
+    if (this.#activeChoropleth === 'criminalite') {
+      return this.#formatCriminality(this.#numberProperty(feature, 'criminaliteScore'));
+    }
+
+    if (this.#activeChoropleth === 'loyer') {
+      return this.#formatRent(this.#numberProperty(feature, 'loyerMedianApt'));
+    }
+
+    return formatPriceM2(this.#numberProperty(feature, 'prixMedianM2'));
+  }
+
   #clearHoverState(): void {
     const map = this.#map;
     if (!map) return;
@@ -357,10 +365,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
     this.#popup?.remove();
 
     if (this.#hoveredCityId != null) {
-      map.setFeatureState(
-        { source: CITIES_SOURCE_ID, id: this.#hoveredCityId },
-        { hover: false },
-      );
+      map.setFeatureState({ source: CITIES_SOURCE_ID, id: this.#hoveredCityId }, { hover: false });
     }
     this.#hoveredCityId = undefined;
   }

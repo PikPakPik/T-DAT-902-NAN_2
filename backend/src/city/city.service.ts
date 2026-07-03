@@ -3,7 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MapBoundsInput } from '../department/bounds.input';
 import { City } from './city.entity';
-import { CityType, PopulationStatsType } from './city.object-type';
+import {
+  CityType,
+  CrimeStatsType,
+  PopulationStatsType,
+  RentStatsType,
+} from './city.object-type';
 
 interface CityRow {
   id: number;
@@ -12,6 +17,8 @@ interface CityRow {
   geometry: string;
   prixMedianM2: string | null;
   densite: string | null;
+  criminaliteScore: string | null;
+  loyerMedianApt: string | null;
 }
 
 @Injectable()
@@ -52,7 +59,29 @@ export class CityService {
           WHERE pc."cityId" = c.id
           ORDER BY pc.annee DESC
           LIMIT 1
-        ) AS "densite"
+        ) AS "densite",
+        (
+          SELECT ROUND(
+            (
+              cr.taux_cambriolages
+              + cr.taux_vols_armes
+              + cr.taux_vols_sans_viol
+              + cr.taux_violences_phys
+            )::numeric,
+            2
+          )
+          FROM crimes_cities cr
+          WHERE cr."cityId" = c.id
+          ORDER BY cr.annee DESC
+          LIMIT 1
+        ) AS "criminaliteScore",
+        (
+          SELECT r.loyer_median_apt
+          FROM rents r
+          WHERE r."cityId" = c.id
+          ORDER BY r.annee DESC
+          LIMIT 1
+        ) AS "loyerMedianApt"
       FROM cities c
       WHERE ST_Intersects(
         c.geom,
@@ -70,6 +99,10 @@ export class CityService {
       geometry: row.geometry,
       prixMedianM2: row.prixMedianM2 != null ? Number(row.prixMedianM2) : null,
       densite: row.densite != null ? Number(row.densite) : null,
+      criminaliteScore:
+        row.criminaliteScore != null ? Number(row.criminaliteScore) : null,
+      loyerMedianApt:
+        row.loyerMedianApt != null ? Number(row.loyerMedianApt) : null,
     }));
   }
 
@@ -139,5 +172,209 @@ export class CityService {
       densite: null,
       evolutionPct: r.evolution_pct != null ? Number(r.evolution_pct) : null,
     }));
+  }
+
+  async findLatestCrimeByCode(code: string): Promise<CrimeStatsType | null> {
+    const rows = await this.cityRepository.query<
+      {
+        annee: string;
+        taux_cambriolages: string;
+        taux_vols_armes: string;
+        taux_vols_sans_viol: string;
+        taux_violences_phys: string;
+        score: string;
+        evolution_pct: string | null;
+      }[]
+    >(
+      `
+      SELECT
+        cr.annee,
+        cr.taux_cambriolages,
+        cr.taux_vols_armes,
+        cr.taux_vols_sans_viol,
+        cr.taux_violences_phys,
+        ROUND(
+          (
+            cr.taux_cambriolages
+            + cr.taux_vols_armes
+            + cr.taux_vols_sans_viol
+            + cr.taux_violences_phys
+          )::numeric,
+          2
+        ) AS score,
+        NULL AS evolution_pct
+      FROM crimes_cities cr
+      JOIN cities c ON c.id = cr."cityId"
+      WHERE c.code = $1
+      ORDER BY cr.annee DESC
+      LIMIT 1
+      `,
+      [code],
+    );
+
+    if (!rows.length) return null;
+
+    const row = rows[0];
+    return {
+      annee: Number(row.annee),
+      tauxCambriolages: Number(row.taux_cambriolages),
+      tauxVolsArmes: Number(row.taux_vols_armes),
+      tauxVolsSansViol: Number(row.taux_vols_sans_viol),
+      tauxViolencesPhys: Number(row.taux_violences_phys),
+      score: Number(row.score),
+      evolutionPct: null,
+    };
+  }
+
+  async findCrimeHistoryByCode(code: string): Promise<CrimeStatsType[]> {
+    const rows = await this.cityRepository.query<
+      {
+        annee: string;
+        taux_cambriolages: string;
+        taux_vols_armes: string;
+        taux_vols_sans_viol: string;
+        taux_violences_phys: string;
+        score: string;
+        evolution_pct: string | null;
+      }[]
+    >(
+      `
+      WITH yearly_crimes AS (
+        SELECT
+          cr.annee,
+          cr.taux_cambriolages,
+          cr.taux_vols_armes,
+          cr.taux_vols_sans_viol,
+          cr.taux_violences_phys,
+          ROUND(
+            (
+              cr.taux_cambriolages
+              + cr.taux_vols_armes
+              + cr.taux_vols_sans_viol
+              + cr.taux_violences_phys
+            )::numeric,
+            2
+          ) AS score
+        FROM crimes_cities cr
+        JOIN cities c ON c.id = cr."cityId"
+        WHERE c.code = $1
+      )
+      SELECT
+        yc.*,
+        ROUND(
+          (yc.score - LAG(yc.score) OVER (ORDER BY yc.annee))::numeric
+          / NULLIF(LAG(yc.score) OVER (ORDER BY yc.annee), 0) * 100,
+          2
+        ) AS evolution_pct
+      FROM yearly_crimes yc
+      ORDER BY yc.annee ASC
+      `,
+      [code],
+    );
+
+    return rows.map((row) => ({
+      annee: Number(row.annee),
+      tauxCambriolages: Number(row.taux_cambriolages),
+      tauxVolsArmes: Number(row.taux_vols_armes),
+      tauxVolsSansViol: Number(row.taux_vols_sans_viol),
+      tauxViolencesPhys: Number(row.taux_violences_phys),
+      score: Number(row.score),
+      evolutionPct: row.evolution_pct != null ? Number(row.evolution_pct) : null,
+    }));
+  }
+
+  async findLatestRentByCode(code: string): Promise<RentStatsType | null> {
+    const rows = await this.cityRepository.query<
+      {
+        annee: string;
+        loyer_median_apt: string | null;
+        loyer_median_t1t2: string | null;
+        loyer_median_t3plus: string | null;
+        loyer_median_maison: string | null;
+        nb_observations: string | null;
+        evolution_pct: string | null;
+      }[]
+    >(
+      `
+      SELECT
+        r.annee,
+        r.loyer_median_apt,
+        r.loyer_median_t1t2,
+        r.loyer_median_t3plus,
+        r.loyer_median_maison,
+        r.nb_observations,
+        NULL AS evolution_pct
+      FROM rents r
+      JOIN cities c ON c.id = r."cityId"
+      WHERE c.code = $1
+      ORDER BY r.annee DESC
+      LIMIT 1
+      `,
+      [code],
+    );
+
+    if (!rows.length) return null;
+    return this.mapRentRow(rows[0]);
+  }
+
+  async findRentHistoryByCode(code: string): Promise<RentStatsType[]> {
+    const rows = await this.cityRepository.query<
+      {
+        annee: string;
+        loyer_median_apt: string | null;
+        loyer_median_t1t2: string | null;
+        loyer_median_t3plus: string | null;
+        loyer_median_maison: string | null;
+        nb_observations: string | null;
+        evolution_pct: string | null;
+      }[]
+    >(
+      `
+      SELECT
+        r.annee,
+        r.loyer_median_apt,
+        r.loyer_median_t1t2,
+        r.loyer_median_t3plus,
+        r.loyer_median_maison,
+        r.nb_observations,
+        ROUND(
+          (r.loyer_median_apt - LAG(r.loyer_median_apt) OVER (ORDER BY r.annee))::numeric
+          / NULLIF(LAG(r.loyer_median_apt) OVER (ORDER BY r.annee), 0) * 100,
+          2
+        ) AS evolution_pct
+      FROM rents r
+      JOIN cities c ON c.id = r."cityId"
+      WHERE c.code = $1
+      ORDER BY r.annee ASC
+      `,
+      [code],
+    );
+
+    return rows.map((row) => this.mapRentRow(row));
+  }
+
+  private mapRentRow(row: {
+    annee: string;
+    loyer_median_apt: string | null;
+    loyer_median_t1t2: string | null;
+    loyer_median_t3plus: string | null;
+    loyer_median_maison: string | null;
+    nb_observations: string | null;
+    evolution_pct: string | null;
+  }): RentStatsType {
+    return {
+      annee: Number(row.annee),
+      loyerMedianApt:
+        row.loyer_median_apt != null ? Number(row.loyer_median_apt) : null,
+      loyerMedianT1T2:
+        row.loyer_median_t1t2 != null ? Number(row.loyer_median_t1t2) : null,
+      loyerMedianT3Plus:
+        row.loyer_median_t3plus != null ? Number(row.loyer_median_t3plus) : null,
+      loyerMedianMaison:
+        row.loyer_median_maison != null ? Number(row.loyer_median_maison) : null,
+      nbObservations:
+        row.nb_observations != null ? Number(row.nb_observations) : null,
+      evolutionPct: row.evolution_pct != null ? Number(row.evolution_pct) : null,
+    };
   }
 }

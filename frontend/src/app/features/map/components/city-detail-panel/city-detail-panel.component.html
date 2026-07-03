@@ -46,6 +46,22 @@
       >
         Démographie
       </button>
+      <button
+        type="button"
+        class="city-detail-panel__tab"
+        [class.city-detail-panel__tab--active]="activeTab() === 'criminalite'"
+        (click)="setTab('criminalite')"
+      >
+        Criminalité
+      </button>
+      <button
+        type="button"
+        class="city-detail-panel__tab"
+        [class.city-detail-panel__tab--active]="activeTab() === 'loyers'"
+        (click)="setTab('loyers')"
+      >
+        Loyers
+      </button>
     </nav>
 
     <div class="city-detail-panel__body">
@@ -89,9 +105,7 @@
                 styleClass="global-score__bar"
               />
               @if (globalReviewCount()) {
-                <p class="global-score__meta">
-                  Basée sur {{ globalReviewCount() }} avis
-                </p>
+                <p class="global-score__meta">Basée sur {{ globalReviewCount() }} avis</p>
               }
             </section>
           }
@@ -122,36 +136,36 @@
 
           @if (recentReviews().length) {
             <ul class="review-list">
-            @for (review of recentReviews(); track review.date + review.comment) {
-              <li class="review-list__item">
-                <div class="review-list__meta">
-                  <time [dateTime]="review.date">
-                    {{ review.date | date: 'mediumDate' }}
-                  </time>
-                  <p-tag
-                    [value]="reviewTagLabel(review)"
-                    [severity]="reviewTagSeverity(review)"
-                  />
-                </div>
-                <p
-                  class="review-list__comment"
-                  [class.review-list__comment--collapsed]="
-                    isReviewExpandable(review.comment) && !isReviewExpanded(review)
-                  "
-                >
-                  {{ review.comment }}
-                </p>
-                @if (isReviewExpandable(review.comment)) {
-                  <button
-                    type="button"
-                    class="review-list__expand"
-                    (click)="toggleReviewExpand(review)"
+              @for (review of recentReviews(); track review.date + review.comment) {
+                <li class="review-list__item">
+                  <div class="review-list__meta">
+                    <time [dateTime]="review.date">
+                      {{ review.date | date: 'mediumDate' }}
+                    </time>
+                    <p-tag
+                      [value]="reviewTagLabel(review)"
+                      [severity]="reviewTagSeverity(review)"
+                    />
+                  </div>
+                  <p
+                    class="review-list__comment"
+                    [class.review-list__comment--collapsed]="
+                      isReviewExpandable(review.comment) && !isReviewExpanded(review)
+                    "
                   >
-                    {{ isReviewExpanded(review) ? 'Afficher moins' : 'Afficher plus' }}
-                  </button>
-                }
-              </li>
-            }
+                    {{ review.comment }}
+                  </p>
+                  @if (isReviewExpandable(review.comment)) {
+                    <button
+                      type="button"
+                      class="review-list__expand"
+                      (click)="toggleReviewExpand(review)"
+                    >
+                      {{ isReviewExpanded(review) ? 'Afficher moins' : 'Afficher plus' }}
+                    </button>
+                  }
+                </li>
+              }
             </ul>
           }
         }
@@ -167,7 +181,9 @@
               <div class="demographie__stats-grid">
                 @if (pop.superficie !== null) {
                   <div class="demographie__stat">
-                    <span class="demographie__stat-value">{{ formatSuperficie(pop.superficie) }} km²</span>
+                    <span class="demographie__stat-value"
+                      >{{ formatSuperficie(pop.superficie) }} km²</span
+                    >
                     <span class="demographie__stat-label">Superficie</span>
                   </div>
                 }
@@ -194,6 +210,88 @@
         } @else {
           <div class="city-detail-panel__state">
             <p>Données démographiques non disponibles pour cette commune.</p>
+          </div>
+        }
+      } @else if (activeTab() === 'criminalite') {
+        @if (loading()) {
+          <div class="city-detail-panel__state">
+            <div class="city-detail-panel__spinner"></div>
+            <p>Chargement des données criminalité…</p>
+          </div>
+        } @else if (crime(); as crimeStats) {
+          <section class="criminalite" aria-label="Données criminalité">
+            <h3 class="criminalite__title">Criminalité</h3>
+            <p class="criminalite__value">{{ formatCrimeRate(crimeStats.score) }}</p>
+            <p class="criminalite__unit">score agrégé</p>
+            <p class="criminalite__year">Dernière année disponible {{ crimeStats.annee }}</p>
+
+            <div class="criminalite__stats-grid">
+              @for (item of crimeItems(); track item.label) {
+                <div class="criminalite__stat">
+                  <span class="criminalite__stat-value">{{ formatCrimeRate(item.value) }}</span>
+                  <span class="criminalite__stat-label">{{ item.label }}</span>
+                </div>
+              }
+            </div>
+
+            @if (crimeChartData(); as chartData) {
+              <div class="criminalite__chart-wrapper">
+                <p-chart
+                  type="line"
+                  [data]="chartData"
+                  [options]="crimeChartOptions"
+                  height="180px"
+                />
+              </div>
+            }
+          </section>
+        } @else {
+          <div class="city-detail-panel__state">
+            <p>Données de criminalité non disponibles pour cette commune.</p>
+          </div>
+        }
+      } @else if (activeTab() === 'loyers') {
+        @if (loading()) {
+          <div class="city-detail-panel__state">
+            <div class="city-detail-panel__spinner"></div>
+            <p>Chargement des loyers…</p>
+          </div>
+        } @else if (rent(); as rentStats) {
+          <section class="loyers" aria-label="Données loyers">
+            <h3 class="loyers__title">Loyers</h3>
+            <p class="loyers__value">{{ formatRent(rentStats.loyerMedianApt) }}</p>
+            <p class="loyers__unit">€/m² appartement</p>
+            <p class="loyers__year">Dernière année disponible {{ rentStats.annee }}</p>
+
+            <div class="loyers__stats-grid">
+              @for (item of rentItems(); track item.label) {
+                <div class="loyers__stat">
+                  <span class="loyers__stat-value">{{ formatRent(item.value) }}</span>
+                  <span class="loyers__stat-label">{{ item.label }}</span>
+                </div>
+              }
+              <div class="loyers__stat loyers__stat--wide">
+                <span class="loyers__stat-value">
+                  {{ formatObservations(rentStats.nbObservations) }}
+                </span>
+                <span class="loyers__stat-label">Observations</span>
+              </div>
+            </div>
+
+            @if (rentChartData(); as chartData) {
+              <div class="loyers__chart-wrapper">
+                <p-chart
+                  type="line"
+                  [data]="chartData"
+                  [options]="rentChartOptions"
+                  height="180px"
+                />
+              </div>
+            }
+          </section>
+        } @else {
+          <div class="city-detail-panel__state">
+            <p>Données de loyers non disponibles pour cette commune.</p>
           </div>
         }
       }

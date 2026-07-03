@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from silver.dpe_load import build_silver, normalized_name
+from silver.dpe_load import build_silver, normalized_name, read_dpe_csv
 
 
 def test_normalized_name_handles_accents_and_symbols() -> None:
@@ -79,3 +79,25 @@ def test_build_silver_keeps_one_row_per_valid_dpe(spark) -> None:
     assert len(rejected) == 1
     assert rejected[0].dpe_id == "DPE-2"
     assert rejected[0].motif == "etiquette_dpe invalide"
+
+
+def test_read_dpe_csv_tolerates_invalid_dates(spark, tmp_path) -> None:
+    path = tmp_path / "dpe03existant.csv"
+    path.write_text(
+        "\n".join(
+            [
+                "numero_dpe,date_etablissement_dpe,etiquette_dpe,etiquette_ges,"
+                "type_batiment,annee_construction,surface_habitable_logement,"
+                "surface_habitable_immeuble,code_insee_ban,"
+                "coordonnee_cartographique_x_ban,coordonnee_cartographique_y_ban",
+                "DPE-0,0,A,B,Maison,2001,80,,44109,356478,6688238",
+                "DPE-1,2024-02-03,A,B,Maison,2001,80,,44109,356478,6688238",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows = {row.dpe_id: row.annee for row in read_dpe_csv(spark, str(path)).collect()}
+
+    assert rows["DPE-0"] is None
+    assert rows["DPE-1"] == 2024

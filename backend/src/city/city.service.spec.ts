@@ -32,6 +32,8 @@ describe('CityService', () => {
         code: '75056',
         geometry: '{"type":"MultiPolygon","coordinates":[]}',
         prixMedianM2: '9800.25',
+        criminaliteScore: '42.5',
+        loyerMedianApt: '18.7',
       },
     ]);
 
@@ -51,8 +53,10 @@ describe('CityService', () => {
         id: 75056,
         name: 'Paris',
         code: '75056',
+        criminaliteScore: 42.5,
         densite: null,
         geometry: '{"type":"MultiPolygon","coordinates":[]}',
+        loyerMedianApt: 18.7,
         prixMedianM2: 9800.25,
       },
     ]);

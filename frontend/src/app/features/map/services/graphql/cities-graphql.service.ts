@@ -12,6 +12,8 @@ export interface CityGql {
   geometry: string;
   prixMedianM2: number | null;
   densite: number | null;
+  criminaliteScore: number | null;
+  loyerMedianApt: number | null;
 }
 
 interface CitiesInBoundsQueryResponse {
@@ -24,12 +26,11 @@ export interface CityProperties {
   code: string;
   prixMedianM2: number | null;
   densite: number | null;
+  criminaliteScore: number | null;
+  loyerMedianApt: number | null;
 }
 
-export type CityFeature = GeoJSON.Feature<
-  GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  CityProperties
->;
+export type CityFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, CityProperties>;
 
 export type CitiesFeatureCollection = GeoJSON.FeatureCollection<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
@@ -45,6 +46,8 @@ const QUERY_CITIES_IN_BOUNDS = gql`
       geometry
       prixMedianM2
       densite
+      criminaliteScore
+      loyerMedianApt
     }
   }
 `;
@@ -55,23 +58,15 @@ export class CitiesGraphqlService {
   readonly #cache = new BoundsFeatureCache<CityFeature>();
   #inFlight?: Promise<CitiesFeatureCollection>;
 
-  async fetchFeatureCollection(
-    viewport: MapBounds,
-  ): Promise<CitiesFeatureCollection> {
+  async fetchFeatureCollection(viewport: MapBounds): Promise<CitiesFeatureCollection> {
     if (this.#cache.isCovered(viewport)) {
-      return this.#cache.collectionForDisplay(
-        viewport,
-        MAP_BOUNDS_FETCH_PADDING,
-      );
+      return this.#cache.collectionForDisplay(viewport, MAP_BOUNDS_FETCH_PADDING);
     }
 
     if (this.#inFlight) {
       await this.#inFlight.catch(() => undefined);
       if (this.#cache.isCovered(viewport)) {
-        return this.#cache.collectionForDisplay(
-          viewport,
-          MAP_BOUNDS_FETCH_PADDING,
-        );
+        return this.#cache.collectionForDisplay(viewport, MAP_BOUNDS_FETCH_PADDING);
       }
     }
 
@@ -117,10 +112,10 @@ export class CitiesGraphqlService {
         code: city.code,
         prixMedianM2: city.prixMedianM2,
         densite: city.densite,
+        criminaliteScore: city.criminaliteScore,
+        loyerMedianApt: city.loyerMedianApt,
       },
-      geometry: JSON.parse(city.geometry) as
-        | GeoJSON.Polygon
-        | GeoJSON.MultiPolygon,
+      geometry: JSON.parse(city.geometry) as GeoJSON.Polygon | GeoJSON.MultiPolygon,
     };
   }
 }

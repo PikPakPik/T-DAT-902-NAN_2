@@ -218,6 +218,8 @@ services:
       context: .
       dockerfile: .docker/airflow-worker/Dockerfile
     image: homepedia-airflow-worker
+    group_add:
+      - "${DOCKER_GID:-989}"
     command: celery worker
     healthcheck:
       test: ["CMD-SHELL", 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"']
@@ -327,9 +329,15 @@ services:
       context: .
       dockerfile: .docker/spark/Dockerfile
     container_name: homepedia-spark
+    user: "airflow:0"
     command: ["tail", "-f", "/dev/null"]
     environment:
       - SPARK_MODE=local
+      - HOME=/tmp
+      - USER=airflow
+      - LOGNAME=airflow
+      - HADOOP_USER_NAME=airflow
+      - SPARK_SUBMIT_OPTS=-Duser.home=/tmp
       - POSTGIS_HOST=${POSTGIS_HOST:-postgis}
       - POSTGIS_PORT=${POSTGIS_PORT:-${POSTGIS_PUBLISH_PORT:-5432}}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}

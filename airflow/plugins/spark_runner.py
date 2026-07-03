@@ -23,6 +23,13 @@ SPARK_POSTGRES_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
 # Chemins data : tout *_DOWNLOAD_DIR / *_SILVER_DIR / *_REJECTS_DIR est transmis
 # au conteneur Spark (POSTGIS/POSTGRES sont déjà définis dans compose.yaml).
 SPARK_ENV_SUFFIXES = ("_DOWNLOAD_DIR", "_SILVER_DIR", "_REJECTS_DIR")
+SPARK_ENV_KEYS = (
+    "DPE_OUTPUT_PARTITIONS",
+    "DPE_SHUFFLE_PARTITIONS",
+    "DPE_DEFAULT_PARALLELISM",
+    "DPE_DRIVER_MEMORY",
+    "DPE_EXECUTOR_MEMORY",
+)
 SPARK_EXEC_ENV_DEFAULTS = {
     "HOME": "/tmp",
     "USER": "airflow",
@@ -35,6 +42,13 @@ DVF_SPARK_CONFS = (
     ("spark.sql.shuffle.partitions", "8"),
     ("spark.driver.memory", os.environ.get("SPARK_DRIVER_MEMORY", "2g")),
     ("spark.executor.memory", os.environ.get("SPARK_EXECUTOR_MEMORY", "2g")),
+)
+DPE_SPARK_CONFS = (
+    ("spark.sql.shuffle.partitions", os.environ.get("DPE_SHUFFLE_PARTITIONS", "128")),
+    ("spark.default.parallelism", os.environ.get("DPE_DEFAULT_PARALLELISM", "128")),
+    ("spark.driver.memory", os.environ.get("DPE_DRIVER_MEMORY", "4g")),
+    ("spark.executor.memory", os.environ.get("DPE_EXECUTOR_MEMORY", "4g")),
+    ("spark.sql.parquet.enableDictionary", "false"),
 )
 TRUTHY_VALUES = ("1", "true", "yes")
 
@@ -213,7 +227,12 @@ def spark_env_vars() -> dict[str, str]:
         for key, value in os.environ.items()
         if value and any(key.endswith(suffix) for suffix in SPARK_ENV_SUFFIXES)
     }
-    return {**SPARK_EXEC_ENV_DEFAULTS, **data_paths}
+    job_env = {
+        key: os.environ[key]
+        for key in SPARK_ENV_KEYS
+        if os.environ.get(key)
+    }
+    return {**SPARK_EXEC_ENV_DEFAULTS, **data_paths, **job_env}
 
 
 def run_spark_submit(
@@ -258,7 +277,7 @@ def run_recensement_population_spark() -> None:
 
 
 def run_dpe_load_spark() -> None:
-    run_spark_submit(DPE_LOAD_JOB)
+    run_spark_submit(DPE_LOAD_JOB, extra_confs=DPE_SPARK_CONFS)
 
 
 def run_dvf_mutations_spark(year: int, link_plots: bool = False) -> None:
