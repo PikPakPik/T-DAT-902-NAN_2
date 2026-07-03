@@ -16,6 +16,7 @@ from spark_runner import (
     report_dvf_mutations_db,
     report_dvf_mutations_silver,
     run_prepare_sections_key,
+    run_dvf_link_plots_spark,
     run_dvf_mutations_spark,
 )
 
@@ -83,6 +84,15 @@ with DAG(
         for year in YEARS
     }
 
+    link_plots = {
+        year: PythonOperator(
+            task_id=f"link_dvf_plots_{year}",
+            python_callable=run_dvf_link_plots_spark,
+            op_kwargs={"year": year},
+        )
+        for year in YEARS
+    }
+
     report = PythonOperator(
         task_id="report_downloads",
         python_callable=report_downloads,
@@ -116,5 +126,9 @@ with DAG(
     for prev_year, next_year in zip(YEARS, YEARS[1:]):
         transforms[prev_year] >> transforms[next_year]
 
-    transforms[YEARS[-1]] >> refresh_stats_task
+    transforms[YEARS[-1]] >> link_plots[YEARS[0]]
+    for prev_year, next_year in zip(YEARS, YEARS[1:]):
+        link_plots[prev_year] >> link_plots[next_year]
+
+    link_plots[YEARS[-1]] >> refresh_stats_task
     refresh_stats_task >> [report, report_silver_task, report_gold_task]

@@ -292,6 +292,14 @@ def run_dvf_mutations_spark(year: int, link_plots: bool = False) -> None:
     )
 
 
+def run_dvf_link_plots_spark(year: int) -> None:
+    run_spark_submit(
+        DVF_MUTATIONS_JOB,
+        extra_args=["--year", str(year), "--link-only"],
+        extra_confs=DVF_SPARK_CONFS,
+    )
+
+
 def run_prepare_sections_key() -> None:
     run_spark_submit(PREPARE_SECTIONS_KEY_JOB, extra_confs=())
 

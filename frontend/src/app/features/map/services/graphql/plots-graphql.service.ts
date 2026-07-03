@@ -35,9 +35,21 @@ export interface PlotSaleGql {
   lots: PlotSaleLotGql[];
 }
 
+export interface PlotDpeGql {
+  id: number;
+  dpeId: string;
+  annee: number;
+  classeEnergie: string;
+  classeGes: string;
+  surfaceHabitable: number;
+  typeBatiment: string;
+  anneeConstruction: number;
+}
+
 export interface PlotDetailsGql
   extends Omit<PlotGql, 'geometry'> {
   sales: PlotSaleGql[];
+  dpes: PlotDpeGql[];
 }
 
 interface PlotsInBoundsQueryResponse {
@@ -119,6 +131,16 @@ const QUERY_PLOT_DETAILS = gql`
       surfaceDisponibleM2
       hasSale
       maxSaleAmount
+      dpes {
+        id
+        dpeId
+        annee
+        classeEnergie
+        classeGes
+        surfaceHabitable
+        typeBatiment
+        anneeConstruction
+      }
       sales {
         id
         dateMutation

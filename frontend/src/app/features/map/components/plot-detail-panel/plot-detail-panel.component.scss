@@ -84,6 +84,10 @@
   &--error {
     color: #b91c1c;
   }
+
+  &--compact {
+    padding: 0.5rem 0 1rem;
+  }
 }
 
 .plot-detail-panel__spinner {
@@ -165,6 +169,103 @@
 .sale-list {
   display: grid;
   gap: 0.75rem;
+}
+
+.dpe-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.dpe-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dpe-card__header,
+.dpe-card__classes,
+.dpe-card__meta {
+  display: flex;
+  align-items: center;
+}
+
+.dpe-card__header {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dpe-card__classes {
+  gap: 0.4rem;
+}
+
+.dpe-card__year {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.dpe-card__meta {
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.dpe-badge {
+  display: inline-grid;
+  min-width: 2rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.dpe-badge--ges {
+  box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.14);
+}
+
+.dpe-badge--a {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.dpe-badge--b {
+  background: #65a30d;
+  color: #ffffff;
+}
+
+.dpe-badge--c {
+  background: #ca8a04;
+  color: #111827;
+}
+
+.dpe-badge--d {
+  background: #f97316;
+  color: #111827;
+}
+
+.dpe-badge--e {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.dpe-badge--f {
+  background: #991b1b;
+  color: #ffffff;
+}
+
+.dpe-badge--g {
+  background: #581c87;
+  color: #ffffff;
 }
 
 .sale-card {

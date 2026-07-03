@@ -39,6 +39,33 @@ export class PlotSaleType {
   lots: PlotSaleLotType[];
 }
 
+@ObjectType({ description: 'Diagnostic DPE rattache a une parcelle' })
+export class PlotDpeType {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => String)
+  dpeId: string;
+
+  @Field(() => Int)
+  annee: number;
+
+  @Field(() => String)
+  classeEnergie: string;
+
+  @Field(() => String)
+  classeGes: string;
+
+  @Field(() => Float)
+  surfaceHabitable: number;
+
+  @Field(() => String)
+  typeBatiment: string;
+
+  @Field(() => Int)
+  anneeConstruction: number;
+}
+
 @ObjectType({ description: 'Parcelle cadastrale' })
 export class PlotType {
   @Field(() => Int)
@@ -88,4 +115,7 @@ export class PlotType {
 
   @Field(() => [PlotSaleType])
   sales: PlotSaleType[];
+
+  @Field(() => [PlotDpeType])
+  dpes: PlotDpeType[];
 }

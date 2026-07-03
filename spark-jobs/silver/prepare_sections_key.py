@@ -20,7 +20,11 @@ import psycopg2
 
 BATCH_SIZE = int(os.environ.get("SECTIONS_BACKFILL_BATCH", "50000"))
 
-SECTION_KEY_SQL = "lpad(c.code, 5, '0') || s.prefixe || s.code"
+SECTION_KEY_SQL = (
+    "lpad(c.code, 5, '0') || "
+    "lpad(coalesce(nullif(s.prefixe, ''), '000'), 3, '0') || "
+    "lpad(s.code, 2, '0')"
+)
 
 BACKFILL_SQL = f"""
 UPDATE sections s

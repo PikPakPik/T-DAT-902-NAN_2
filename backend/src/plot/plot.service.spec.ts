@@ -53,6 +53,7 @@ describe('PlotService', () => {
         number: '42',
         name: '7505600010042',
         geometry: '{"type":"MultiPolygon","coordinates":[]}',
+        dpes: [],
         hasSale: false,
         maxSaleAmount: null,
         prixMedianM2: null,

@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type {
+  PlotDpeGql,
   PlotDetailsGql,
   PlotSaleGql,
   PlotSaleLotGql,
@@ -29,6 +30,7 @@ export class PlotDetailPanelComponent {
   readonly closed = output<void>();
 
   readonly salesCount = computed(() => this.plot()?.sales.length ?? 0);
+  readonly dpesCount = computed(() => this.plot()?.dpes.length ?? 0);
 
   formatCurrency(value: number | null | undefined): string {
     if (value == null || !Number.isFinite(value)) return '-';
@@ -69,6 +71,25 @@ export class PlotDetailPanelComponent {
 
   lotSurfaceLabel(lot: PlotSaleLotGql): string {
     return this.formatSurface(lot.surfaceReelleBati ?? lot.surfaceTerrain);
+  }
+
+  dpeClassLabel(value: string | null | undefined): string {
+    return value?.trim().toUpperCase() || '-';
+  }
+
+  dpeClassModifier(value: string | null | undefined): string {
+    const classe = this.dpeClassLabel(value);
+    return /^[A-G]$/.test(classe) ? `dpe-badge--${classe.toLowerCase()}` : '';
+  }
+
+  dpeTypeLabel(dpe: PlotDpeGql): string {
+    return dpe.typeBatiment?.trim() || 'Bâtiment';
+  }
+
+  dpeConstructionLabel(dpe: PlotDpeGql): string {
+    const year = dpe.anneeConstruction;
+    if (!Number.isFinite(year) || year <= 0) return '-';
+    return String(year);
   }
 
   close(): void {

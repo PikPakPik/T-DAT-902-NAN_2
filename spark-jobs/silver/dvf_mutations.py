@@ -89,8 +89,7 @@ FROM (
   INNER JOIN mutations m ON ml2."mutationId" = m.id
   INNER JOIN sections s ON s.section_key = substr(ml2.id_parcelle, 1, 10)
   INNER JOIN plots p ON p."sectionId" = s.id
-    AND p.number ~ '^[0-9]+$'
-    AND p.number::int = substr(ml2.id_parcelle, 11, 4)::int
+    AND lpad(p.number, 4, '0') = substr(ml2.id_parcelle, 11, 4)
   WHERE m.annee = %s
     AND substr(ml2.id_parcelle, 1, 2) = %s
     AND ml2."plotId" IS NULL

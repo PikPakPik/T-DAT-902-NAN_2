@@ -3,7 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MapBoundsInput } from '../department/bounds.input';
 import { Plot } from './plot.entity';
-import { PlotSaleLotType, PlotSaleType, PlotType } from './plot.object-type';
+import {
+  PlotDpeType,
+  PlotSaleLotType,
+  PlotSaleType,
+  PlotType,
+} from './plot.object-type';
 
 interface PlotRow {
   id: number;
@@ -33,6 +38,17 @@ interface PlotSaleLotRow {
   surfaceReelleBati: string | null;
   nombrePiecesPrincipales: number | null;
   surfaceTerrain: string | null;
+}
+
+interface PlotDpeRow {
+  id: number;
+  dpeId: string;
+  annee: number;
+  classeEnergie: string;
+  classeGes: string;
+  surfaceHabitable: string;
+  typeBatiment: string;
+  anneeConstruction: number;
 }
 
 @Injectable()
@@ -233,30 +249,53 @@ export class PlotService {
     const plot = rows[0];
     if (!plot) return null;
 
-    const salesRows = await this.plotRepository.query<PlotSaleRow[]>(
-      `
-      SELECT
-        m.id,
-        m.date_mutation::text AS "dateMutation",
-        m.nature_mutation AS "natureMutation",
-        m.valeur_fonciere AS "valeurFonciere",
-        m.prix_m2 AS "prixM2"
-      FROM mutations m
-      INNER JOIN mutation_locals ml ON ml."mutationId" = m.id
-      WHERE ml."plotId" = $1
-      GROUP BY
-        m.id,
-        m.date_mutation,
-        m.nature_mutation,
-        m.valeur_fonciere,
-        m.prix_m2
-      ORDER BY m.valeur_fonciere DESC NULLS LAST, m.date_mutation DESC
-    `,
-      [plotId],
-    );
+    const [salesRows, dpeRows] = await Promise.all([
+      this.plotRepository.query<PlotSaleRow[]>(
+        `
+        SELECT
+          m.id,
+          m.date_mutation::text AS "dateMutation",
+          m.nature_mutation AS "natureMutation",
+          m.valeur_fonciere AS "valeurFonciere",
+          m.prix_m2 AS "prixM2"
+        FROM mutations m
+        INNER JOIN mutation_locals ml ON ml."mutationId" = m.id
+        WHERE ml."plotId" = $1
+        GROUP BY
+          m.id,
+          m.date_mutation,
+          m.nature_mutation,
+          m.valeur_fonciere,
+          m.prix_m2
+        ORDER BY m.valeur_fonciere DESC NULLS LAST, m.date_mutation DESC
+      `,
+        [plotId],
+      ),
+      this.plotRepository.query<PlotDpeRow[]>(
+        `
+        SELECT
+          d.id,
+          d.dpe_id AS "dpeId",
+          d.annee,
+          d.classe_energie AS "classeEnergie",
+          d.classe_ges AS "classeGes",
+          d.surface_habitable AS "surfaceHabitable",
+          d.type_batiment AS "typeBatiment",
+          d.annee_construction AS "anneeConstruction"
+        FROM dpes d
+        WHERE d."plotId" = $1
+        ORDER BY d.annee DESC, d.id DESC
+        LIMIT 25
+      `,
+        [plotId],
+      ),
+    ]);
 
     if (!salesRows.length) {
-      return this.#toType(plot);
+      return {
+        ...this.#toType(plot),
+        dpes: dpeRows.map((dpe) => this.#toDpeType(dpe)),
+      };
     }
 
     const saleIds = salesRows.map((sale) => sale.id);
@@ -292,6 +331,7 @@ export class PlotService {
 
     return {
       ...this.#toType(plot),
+      dpes: dpeRows.map((dpe) => this.#toDpeType(dpe)),
       sales: salesRows.map(
         (sale): PlotSaleType => ({
           id: sale.id,
@@ -318,6 +358,20 @@ export class PlotService {
       hasSale: Boolean(row.hasSale),
       maxSaleAmount: this.#toNullableNumber(row.maxSaleAmount),
       sales: [],
+      dpes: [],
+    };
+  }
+
+  #toDpeType(row: PlotDpeRow): PlotDpeType {
+    return {
+      id: row.id,
+      dpeId: row.dpeId,
+      annee: row.annee,
+      classeEnergie: row.classeEnergie,
+      classeGes: row.classeGes,
+      surfaceHabitable: Number(row.surfaceHabitable),
+      typeBatiment: row.typeBatiment,
+      anneeConstruction: row.anneeConstruction,
     };
   }
 

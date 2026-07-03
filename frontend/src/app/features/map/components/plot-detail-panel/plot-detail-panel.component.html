@@ -1,5 +1,5 @@
 @if (visible()) {
-  <aside class="plot-detail-panel" aria-label="Ventes DVF de la parcelle">
+  <aside class="plot-detail-panel" aria-label="Détails de la parcelle">
     <header class="plot-detail-panel__header">
       <div class="plot-detail-panel__header-main">
         <span class="plot-detail-panel__eyebrow">Parcelle</span>
@@ -21,7 +21,7 @@
       @if (loading()) {
         <div class="plot-detail-panel__state">
           <div class="plot-detail-panel__spinner"></div>
-          <p>Chargement des ventes…</p>
+          <p>Chargement de la parcelle…</p>
         </div>
       } @else if (error()) {
         <div class="plot-detail-panel__state plot-detail-panel__state--error">
@@ -42,6 +42,41 @@
             <span class="plot-summary__label">Prix moyen</span>
           </div>
         </section>
+
+        <div class="plot-detail-panel__section-title">
+          <h3>DPE</h3>
+          <span>{{ dpesCount() }}</span>
+        </div>
+
+        @if (currentPlot.dpes.length) {
+          <div class="dpe-list">
+            @for (dpe of currentPlot.dpes; track dpe.id) {
+              <article class="dpe-card">
+                <header class="dpe-card__header">
+                  <div class="dpe-card__classes">
+                    <span [class]="'dpe-badge ' + dpeClassModifier(dpe.classeEnergie)">
+                      {{ dpeClassLabel(dpe.classeEnergie) }}
+                    </span>
+                    <span [class]="'dpe-badge dpe-badge--ges ' + dpeClassModifier(dpe.classeGes)">
+                      {{ dpeClassLabel(dpe.classeGes) }}
+                    </span>
+                  </div>
+                  <span class="dpe-card__year">{{ dpe.annee }}</span>
+                </header>
+
+                <div class="dpe-card__meta">
+                  <span>{{ dpeTypeLabel(dpe) }}</span>
+                  <span>{{ formatSurface(dpe.surfaceHabitable) }}</span>
+                  <span>Constr. {{ dpeConstructionLabel(dpe) }}</span>
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="plot-detail-panel__state plot-detail-panel__state--compact">
+            <p>Aucun DPE rattaché à cette parcelle.</p>
+          </div>
+        }
 
         <div class="plot-detail-panel__section-title">
           <h3>Ventes</h3>
