@@ -224,18 +224,15 @@ export class CitiesMapOverlay implements MapboxOverlay {
       if (!center) return;
 
       const name = feature.properties?.['name'] ?? 'Commune';
-      const prixRaw = feature.properties?.['prixMedianM2'];
-      const prix =
-        typeof prixRaw === 'number'
-          ? prixRaw
-          : prixRaw != null
-            ? Number(prixRaw)
-            : null;
+      const metricLabel =
+        this.#activeChoropleth === 'densite'
+          ? this.#formatDensity(this.#numberProperty(feature, 'densite'))
+          : formatPriceM2(this.#numberProperty(feature, 'prixMedianM2'));
 
       this.#popup
         ?.setLngLat(center)
         .setHTML(
-          `<div><strong>${name}</strong><br/><span>${formatPriceM2(prix)}</span></div>`,
+          `<div><strong>${name}</strong><br/><span>${metricLabel}</span></div>`,
         )
         .addTo(map);
     };
@@ -336,6 +333,20 @@ export class CitiesMapOverlay implements MapboxOverlay {
 
   #isCityInteractionDisabled(map: mapboxgl.Map): boolean {
     return this.#detailViewActive || map.getZoom() >= MAP_SECTIONS_MIN_ZOOM;
+  }
+
+  #numberProperty(feature: GeoJSON.Feature, property: string): number | null {
+    const raw = feature.properties?.[property];
+    const value = typeof raw === 'number' ? raw : raw != null ? Number(raw) : null;
+    return value != null && Number.isFinite(value) ? value : null;
+  }
+
+  #formatDensity(value: number | null): string {
+    if (value == null || value <= 0) {
+      return 'Données indisponibles';
+    }
+
+    return `${Math.round(value).toLocaleString('fr-FR')} hab/km²`;
   }
 
   #clearHoverState(): void {

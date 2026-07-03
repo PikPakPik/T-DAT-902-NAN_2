@@ -1,5 +1,4 @@
 import { Component, output, signal } from '@angular/core';
-import { DENSITY_LEGEND } from '../../overlays/shared/density-colors';
 import {
   DEFAULT_MAP_FILTERS,
   type MapFilter,
@@ -19,8 +18,6 @@ export class MapFilterPanelComponent {
   readonly open = this.#open.asReadonly();
 
   readonly filters = signal<MapFilter[]>(structuredClone(DEFAULT_MAP_FILTERS));
-
-  readonly densityLegend = DENSITY_LEGEND;
 
   get activeFilter(): MapFilter | undefined {
     return this.filters().find((f) => f.active);

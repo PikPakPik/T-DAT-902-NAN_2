@@ -1,9 +1,11 @@
 import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { CityDetailPanelComponent } from './components/city-detail-panel/city-detail-panel.component';
+import { MapLegendComponent } from './components/map-legend/map-legend.component';
 import { MapFilterPanelComponent } from './components/map-filter-panel/map-filter-panel.component';
 import { PlotDetailPanelComponent } from './components/plot-detail-panel/plot-detail-panel.component';
 import type { MapFilterId } from './models/map-filter.model';
 import { PRICE_LEGEND } from './overlays/shared/price-colors';
+import { DENSITY_LEGEND } from './overlays/shared/density-colors';
 import { MapboxMapFacade, type PriceLegendScope } from './core/mapbox-map.facade';
 import type { SelectedCity } from './models/selected-city.model';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
@@ -26,7 +28,12 @@ type PriceLegendLabels = {
 @Component({
   selector: 'map',
   standalone: true,
-  imports: [CityDetailPanelComponent, MapFilterPanelComponent, PlotDetailPanelComponent],
+  imports: [
+    CityDetailPanelComponent,
+    MapFilterPanelComponent,
+    MapLegendComponent,
+    PlotDetailPanelComponent,
+  ],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
 })
@@ -38,12 +45,17 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly isLoading = computed(() => this.graphqlStatus() === 'idle' || this.graphqlStatus() === 'loading');
   readonly activeFilter = signal<MapFilterId>('prix_m2');
   readonly priceLegend = PRICE_LEGEND;
+  readonly densityLegend = DENSITY_LEGEND;
   readonly legendScope = signal('France');
-  readonly priceLegendVisible = signal(true);
+  readonly mapLegendVisible = signal(true);
   readonly priceLegendLabels = signal<PriceLegendLabels>({
     min: PRICE_LEGEND.min,
     mid: PRICE_LEGEND.mid,
     max: PRICE_LEGEND.max,
+  });
+  readonly priceLegendLabelValues = computed(() => {
+    const labels = this.priceLegendLabels();
+    return [labels.min, labels.mid, labels.max];
   });
 
   readonly panelVisible = signal(false);
@@ -104,7 +116,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   }
 
   async updatePriceLegend(scope: PriceLegendScope): Promise<void> {
-    this.priceLegendVisible.set(scope.showLegend !== false);
+    this.mapLegendVisible.set(scope.showLegend !== false);
     this.legendScope.set(scope.scope);
     if (scope.showLegend === false) return;
 

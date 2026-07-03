@@ -38,17 +38,6 @@
         </label>
       }
 
-      @if (activeFilter?.id === 'densite') {
-        <div class="filter-panel__legend">
-          <p class="filter-panel__legend-title">Légende</p>
-          @for (entry of densityLegend; track entry.label) {
-            <div class="filter-panel__legend-row">
-              <span class="filter-panel__legend-swatch" [style.background]="entry.color"></span>
-              <span class="filter-panel__legend-label">{{ entry.label }}</span>
-            </div>
-          }
-        </div>
-      }
     </div>
   }
 </div>
