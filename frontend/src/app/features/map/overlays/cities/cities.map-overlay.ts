@@ -11,6 +11,7 @@ import {
   formatPriceM2,
 } from '../shared/price-colors';
 import { densityFillColorExpression } from '../shared/density-colors';
+import type { MapFilterId } from '../../models/map-filter.model';
 
 const CITIES_SOURCE_ID = 'cities-fr';
 const CITIES_FILL_LAYER_ID = 'cities-fr-fill';
@@ -40,7 +41,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
   #detailViewActive = false;
   #interactionsBound = false;
 
-  #activeChoropleth: 'densite' | null = null;
+  #activeChoropleth: MapFilterId = 'prix_m2';
 
   constructor(private readonly onCitySelect?: CitySelectHandler) {}
 
@@ -70,7 +71,7 @@ export class CitiesMapOverlay implements MapboxOverlay {
     this.#bindInteractions();
   }
 
-  setChoropleth(key: 'densite' | null): void {
+  setChoropleth(key: MapFilterId): void {
     this.#activeChoropleth = key;
     const map = this.#map;
     if (!map || !map.getLayer(CITIES_FILL_LAYER_ID)) return;

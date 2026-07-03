@@ -25,10 +25,24 @@
   } @else {
     <div #map class="map"></div>
     <map-filter-panel (filterChanged)="onFilterChanged($event)" />
+    @if (activeFilter() === 'prix_m2' && priceLegendVisible()) {
+      <div class="map-price-legend" aria-label="Légende prix au mètre carré">
+        <div class="map-price-legend__title-row">
+          <span>{{ priceLegend.title }}</span>
+          <strong>{{ legendScope() }}</strong>
+        </div>
+        <div class="map-price-legend__bar"></div>
+        <div class="map-price-legend__labels">
+          <span>{{ priceLegendLabels().min }}</span>
+          <span>{{ priceLegendLabels().mid }}</span>
+          <span>{{ priceLegendLabels().max }}</span>
+        </div>
+      </div>
+    }
   }
 
   <city-detail-panel
-    [visible]="panelVisible()"
+    [visible]="panelVisible() && panelMode() === 'city'"
     [loading]="insightsLoading()"
     [error]="insightsError()"
     [city]="selectedCity()"
@@ -37,5 +51,12 @@
     [populationHistory]="cityPopulationHistory()"
     (closed)="onPanelClosed()"
   />
-</div>
 
+  <plot-detail-panel
+    [visible]="panelVisible() && panelMode() === 'plot'"
+    [loading]="plotLoading()"
+    [error]="plotError()"
+    [plot]="selectedPlot()"
+    (closed)="onPanelClosed()"
+  />
+</div>

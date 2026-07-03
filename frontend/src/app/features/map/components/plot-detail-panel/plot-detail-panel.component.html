@@ -1,0 +1,106 @@
+@if (visible()) {
+  <aside class="plot-detail-panel" aria-label="Ventes DVF de la parcelle">
+    <header class="plot-detail-panel__header">
+      <div class="plot-detail-panel__header-main">
+        <span class="plot-detail-panel__eyebrow">Parcelle</span>
+        <h2 class="plot-detail-panel__title">
+          {{ plot()?.name ?? 'Chargement…' }}
+        </h2>
+      </div>
+      <button
+        type="button"
+        class="plot-detail-panel__close"
+        aria-label="Fermer le panneau"
+        (click)="close()"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="plot-detail-panel__body">
+      @if (loading()) {
+        <div class="plot-detail-panel__state">
+          <div class="plot-detail-panel__spinner"></div>
+          <p>Chargement des ventes…</p>
+        </div>
+      } @else if (error()) {
+        <div class="plot-detail-panel__state plot-detail-panel__state--error">
+          <p>{{ error() }}</p>
+        </div>
+      } @else if (plot(); as currentPlot) {
+        <section class="plot-summary" aria-label="Détails parcelle">
+          <div class="plot-summary__stat">
+            <span class="plot-summary__value">{{ formatSurface(currentPlot.surfaceM2) }}</span>
+            <span class="plot-summary__label">Surface</span>
+          </div>
+          <div class="plot-summary__stat">
+            <span class="plot-summary__value">{{ formatSurface(currentPlot.surfaceDisponibleM2) }}</span>
+            <span class="plot-summary__label">Disponible</span>
+          </div>
+          <div class="plot-summary__stat plot-summary__stat--wide">
+            <span class="plot-summary__value">{{ formatPriceM2(currentPlot.prixMoyenM2) }}</span>
+            <span class="plot-summary__label">Prix moyen</span>
+          </div>
+        </section>
+
+        <div class="plot-detail-panel__section-title">
+          <h3>Ventes</h3>
+          <span>{{ salesCount() }}</span>
+        </div>
+
+        @if (currentPlot.sales.length) {
+          <div class="sale-list">
+            @for (sale of currentPlot.sales; track sale.id) {
+              <article class="sale-card">
+                <header class="sale-card__header">
+                  <h4 class="sale-card__title">
+                    {{ sale.natureMutation || 'Vente' }}
+                  </h4>
+                  <strong class="sale-card__amount">
+                    {{ formatCurrency(sale.valeurFonciere) }}
+                  </strong>
+                </header>
+
+                <div class="sale-card__meta">
+                  <span>
+                    <i class="pi pi-calendar" aria-hidden="true"></i>
+                    <time [dateTime]="sale.dateMutation">
+                      {{ sale.dateMutation | date: 'dd/MM/yyyy' }}
+                    </time>
+                  </span>
+                  @if (sale.prixM2 != null) {
+                    <span>{{ formatPriceM2(sale.prixM2) }}</span>
+                  }
+                </div>
+
+                <p class="sale-card__lot-count">{{ lotCountLabel(sale) }}</p>
+
+                @if (sale.lots.length) {
+                  <ul class="lot-list">
+                    @for (lot of sale.lots; track lot.id) {
+                      <li class="lot-list__item">
+                        <span class="lot-list__type">{{ lotTypeLabel(lot) }}</span>
+                        <span class="lot-list__detail">
+                          <i class="pi pi-home" aria-hidden="true"></i>
+                          {{ piecesLabel(lot) }}
+                        </span>
+                        <span class="lot-list__detail">
+                          <i class="pi pi-arrows-h" aria-hidden="true"></i>
+                          {{ lotSurfaceLabel(lot) }}
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                }
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="plot-detail-panel__state">
+            <p>Aucune vente DVF rattachée à cette parcelle.</p>
+          </div>
+        }
+      }
+    </div>
+  </aside>
+}

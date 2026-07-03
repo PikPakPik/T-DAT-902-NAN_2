@@ -1,4 +1,4 @@
-export type MapFilterId = 'densite';
+export type MapFilterId = 'prix_m2' | 'densite';
 
 export interface MapFilter {
   id: MapFilterId;
@@ -8,6 +8,12 @@ export interface MapFilter {
 }
 
 export const DEFAULT_MAP_FILTERS: MapFilter[] = [
+  {
+    id: 'prix_m2',
+    label: 'Prix au m²',
+    description: 'Ventes DVF',
+    active: true,
+  },
   {
     id: 'densite',
     label: 'Densité de population',

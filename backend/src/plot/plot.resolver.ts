@@ -26,4 +26,15 @@ export class PlotResolver {
   ): Promise<PlotType[]> {
     return this.plotService.findBySectionId(sectionId);
   }
+
+  @Query(() => PlotType, {
+    name: 'plotDetails',
+    nullable: true,
+    description: 'Detail DVF d une parcelle cadastrale',
+  })
+  plotDetails(
+    @Args('plotId', { type: () => Int }) plotId: number,
+  ): Promise<PlotType | null> {
+    return this.plotService.findDetailsById(plotId);
+  }
 }

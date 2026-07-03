@@ -13,7 +13,7 @@ import {
   styleUrl: './map-filter-panel.component.scss',
 })
 export class MapFilterPanelComponent {
-  readonly filterChanged = output<MapFilterId | null>();
+  readonly filterChanged = output<MapFilterId>();
 
   readonly #open = signal(false);
   readonly open = this.#open.asReadonly();
@@ -34,10 +34,9 @@ export class MapFilterPanelComponent {
     this.filters.update((filters) =>
       filters.map((f) => ({
         ...f,
-        active: f.id === id ? !f.active : false,
+        active: f.id === id,
       })),
     );
-    const active = this.filters().find((f) => f.active);
-    this.filterChanged.emit(active?.id ?? null);
+    this.filterChanged.emit(id);
   }
 }

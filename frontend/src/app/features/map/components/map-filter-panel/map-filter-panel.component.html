@@ -20,12 +20,13 @@
 
   @if (open()) {
     <div class="filter-panel__panel" role="dialog" aria-label="Filtres carte">
-      <p class="filter-panel__section-title">Données démographiques</p>
+      <p class="filter-panel__section-title">Filtres</p>
 
       @for (filter of filters(); track filter.id) {
         <label class="filter-panel__option">
           <input
-            type="checkbox"
+            type="radio"
+            name="map-filter"
             class="filter-panel__checkbox"
             [checked]="filter.active"
             (change)="toggleFilter(filter.id)"

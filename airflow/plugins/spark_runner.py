@@ -15,11 +15,19 @@ FILOSOFI_INCOME_JOB = "/opt/spark-jobs/silver/filosofi_income.py"
 DELINQUANCE_CRIMES_JOB = "/opt/spark-jobs/silver/delinquance_crimes.py"
 RECENSEMENT_POPULATION_JOB = "/opt/spark-jobs/silver/recensement_population.py"
 DVF_MUTATIONS_JOB = "/opt/spark-jobs/silver/dvf_mutations.py"
+PREPARE_SECTIONS_KEY_JOB = "/opt/spark-jobs/silver/prepare_sections_key.py"
 SPARK_CONTAINER = os.environ.get("SPARK_CONTAINER_NAME", "homepedia-spark")
 SPARK_POSTGRES_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
 # Chemins data : tout *_DOWNLOAD_DIR / *_SILVER_DIR / *_REJECTS_DIR est transmis
 # au conteneur Spark (POSTGIS/POSTGRES sont déjà définis dans compose.yaml).
 SPARK_ENV_SUFFIXES = ("_DOWNLOAD_DIR", "_SILVER_DIR", "_REJECTS_DIR")
+SPARK_EXEC_ENV_DEFAULTS = {
+    "HOME": "/tmp",
+    "USER": "airflow",
+    "LOGNAME": "airflow",
+    "HADOOP_USER_NAME": "airflow",
+    "SPARK_SUBMIT_OPTS": "-Duser.home=/tmp",
+}
 DEFAULT_SPARK_CONFS = (("spark.sql.shuffle.partitions", "4"),)
 DVF_SPARK_CONFS = (
     ("spark.sql.shuffle.partitions", "8"),
@@ -27,6 +35,159 @@ DVF_SPARK_CONFS = (
     ("spark.executor.memory", os.environ.get("SPARK_EXECUTOR_MEMORY", "2g")),
 )
 TRUTHY_VALUES = ("1", "true", "yes")
+
+DVF_STATS_CITIES_SQL = """
+WITH base AS (
+  SELECT
+    c.id AS city_id,
+    m.annee,
+    ml.type_local,
+    m.prix_m2::numeric AS prix_m2,
+    ml.surface_reelle_bati::numeric AS surface_reelle_bati
+  FROM mutations m
+  INNER JOIN mutation_locals ml ON ml."mutationId" = m.id
+  INNER JOIN plots p ON p.id = ml."plotId"
+  INNER JOIN sections s ON s.id = p."sectionId"
+  INNER JOIN cities c ON c.id = s."cityId"
+  WHERE m.prix_m2 IS NOT NULL
+    AND m.prix_m2 > 0
+    AND ml.surface_reelle_bati IS NOT NULL
+    AND ml.surface_reelle_bati > 0
+    AND ml.type_local IN ('Maison', 'Appartement')
+),
+aggregated AS (
+  SELECT
+    city_id,
+    annee,
+    type_local,
+    ROUND(
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2)::numeric,
+      2
+    ) AS prix_median_m2,
+    ROUND(AVG(prix_m2), 2) AS prix_moyen_m2,
+    ROUND(
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY surface_reelle_bati)::numeric,
+      2
+    ) AS surface_mediane,
+    COUNT(*)::integer AS nb_transactions
+  FROM base
+  GROUP BY city_id, annee, type_local
+),
+with_evolution AS (
+  SELECT
+    *,
+    LAG(prix_median_m2) OVER (
+      PARTITION BY city_id, type_local
+      ORDER BY annee
+    ) AS previous_prix_median_m2
+  FROM aggregated
+)
+INSERT INTO stats_cities (
+  "cityId",
+  annee,
+  type_local,
+  prix_median_m2,
+  prix_moyen_m2,
+  surface_mediane,
+  nb_transactions,
+  evolution_prix_pct
+)
+SELECT
+  city_id,
+  annee,
+  type_local,
+  prix_median_m2,
+  prix_moyen_m2,
+  surface_mediane,
+  nb_transactions,
+  COALESCE(
+    ROUND(
+      ((prix_median_m2 - previous_prix_median_m2)
+        / NULLIF(previous_prix_median_m2, 0)
+      ) * 100,
+      2
+    ),
+    0
+  ) AS evolution_prix_pct
+FROM with_evolution
+"""
+
+DVF_STATS_DEPARTMENTS_SQL = """
+WITH base AS (
+  SELECT
+    d.id AS department_id,
+    m.annee,
+    ml.type_local,
+    m.prix_m2::numeric AS prix_m2,
+    ml.surface_reelle_bati::numeric AS surface_reelle_bati
+  FROM mutations m
+  INNER JOIN mutation_locals ml ON ml."mutationId" = m.id
+  INNER JOIN plots p ON p.id = ml."plotId"
+  INNER JOIN sections s ON s.id = p."sectionId"
+  INNER JOIN cities c ON c.id = s."cityId"
+  INNER JOIN departments d ON d.id = c."departmentId"
+  WHERE m.prix_m2 IS NOT NULL
+    AND m.prix_m2 > 0
+    AND ml.surface_reelle_bati IS NOT NULL
+    AND ml.surface_reelle_bati > 0
+    AND ml.type_local IN ('Maison', 'Appartement')
+),
+aggregated AS (
+  SELECT
+    department_id,
+    annee,
+    type_local,
+    ROUND(
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2)::numeric,
+      2
+    ) AS prix_median_m2,
+    ROUND(AVG(prix_m2), 2) AS prix_moyen_m2,
+    ROUND(
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY surface_reelle_bati)::numeric,
+      2
+    ) AS surface_mediane,
+    COUNT(*)::integer AS nb_transactions
+  FROM base
+  GROUP BY department_id, annee, type_local
+),
+with_evolution AS (
+  SELECT
+    *,
+    LAG(prix_median_m2) OVER (
+      PARTITION BY department_id, type_local
+      ORDER BY annee
+    ) AS previous_prix_median_m2
+  FROM aggregated
+)
+INSERT INTO stats_departments (
+  "departmentId",
+  annee,
+  type_local,
+  prix_median_m2,
+  prix_moyen_m2,
+  surface_mediane,
+  nb_transactions,
+  evolution_prix_pct
+)
+SELECT
+  department_id,
+  annee,
+  type_local,
+  prix_median_m2,
+  prix_moyen_m2,
+  surface_mediane,
+  nb_transactions,
+  COALESCE(
+    ROUND(
+      ((prix_median_m2 - previous_prix_median_m2)
+        / NULLIF(previous_prix_median_m2, 0)
+      ) * 100,
+      2
+    ),
+    0
+  ) AS evolution_prix_pct
+FROM with_evolution
+"""
 
 
 def pg_conn_params() -> dict[str, str | int]:
@@ -45,11 +206,12 @@ def env_flag(name: str) -> bool:
 
 def spark_env_vars() -> dict[str, str]:
     """Variables de chemins data à transmettre au conteneur Spark via docker exec."""
-    return {
+    data_paths = {
         key: value
         for key, value in os.environ.items()
         if value and any(key.endswith(suffix) for suffix in SPARK_ENV_SUFFIXES)
     }
+    return {**SPARK_EXEC_ENV_DEFAULTS, **data_paths}
 
 
 def run_spark_submit(
@@ -103,6 +265,33 @@ def run_dvf_mutations_spark(year: int, link_plots: bool = False) -> None:
         extra_args=extra_args,
         extra_confs=DVF_SPARK_CONFS,
     )
+
+
+def run_prepare_sections_key() -> None:
+    run_spark_submit(PREPARE_SECTIONS_KEY_JOB, extra_confs=())
+
+
+def refresh_dvf_stats() -> None:
+    try:
+        import psycopg2
+    except ImportError:
+        print("psycopg2 indisponible — stats DVF ignorees")
+        return
+
+    conn = psycopg2.connect(**pg_conn_params())
+    try:
+        with conn.cursor() as cur:
+            print("stats_cities/stats_departments : suppression anciennes stats DVF")
+            cur.execute("TRUNCATE stats_cities, stats_departments RESTART IDENTITY")
+            print("stats_cities : calcul depuis mutations liees aux parcelles")
+            cur.execute(DVF_STATS_CITIES_SQL)
+            print(f"stats_cities : {cur.rowcount} ligne(s) inseree(s)")
+            print("stats_departments : calcul depuis mutations liees aux parcelles")
+            cur.execute(DVF_STATS_DEPARTMENTS_SQL)
+            print(f"stats_departments : {cur.rowcount} ligne(s) inseree(s)")
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def report_filosofi_income_silver() -> None:
@@ -257,12 +446,18 @@ def report_dvf_mutations_db() -> None:
             total_locals = cur.fetchone()[0]
             cur.execute('SELECT COUNT(*) FROM mutation_locals WHERE "plotId" IS NOT NULL')
             with_plot = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM stats_cities")
+            total_city_stats = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM stats_departments")
+            total_department_stats = cur.fetchone()[0]
             cur.execute(
                 "SELECT annee, COUNT(*) FROM mutations GROUP BY annee ORDER BY annee"
             )
             by_year = cur.fetchall()
         print(f"mutations : {total} vente(s) en base")
         print(f"mutation_locals : {total_locals} lot(s) ({with_plot} lie(s) a une parcelle)")
+        print(f"stats_cities : {total_city_stats} ligne(s)")
+        print(f"stats_departments : {total_department_stats} ligne(s)")
         for annee, n in by_year:
             print(f"  annee {annee}: {n} vente(s)")
     finally:

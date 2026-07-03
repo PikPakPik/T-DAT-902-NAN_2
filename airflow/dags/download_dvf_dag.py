@@ -12,8 +12,10 @@ except ImportError:
 
 from download_utils import download_to_path
 from spark_runner import (
+    refresh_dvf_stats,
     report_dvf_mutations_db,
     report_dvf_mutations_silver,
+    run_prepare_sections_key,
     run_dvf_mutations_spark,
 )
 
@@ -56,6 +58,7 @@ with DAG(
     start_date=datetime(2026, 1, 1),
     schedule="@monthly",
     catchup=False,
+    max_active_runs=1,
     default_args={
         "retries": 3,
         "retry_delay": timedelta(minutes=2),
@@ -86,6 +89,16 @@ with DAG(
         trigger_rule="all_done",
     )
 
+    prepare_sections_key = PythonOperator(
+        task_id="prepare_sections_key",
+        python_callable=run_prepare_sections_key,
+    )
+
+    refresh_stats_task = PythonOperator(
+        task_id="refresh_dvf_stats",
+        python_callable=refresh_dvf_stats,
+    )
+
     report_silver_task = PythonOperator(
         task_id="report_dvf_mutations_silver",
         python_callable=report_dvf_mutations_silver,
@@ -99,8 +112,9 @@ with DAG(
     )
 
     # Téléchargements en parallèle, puis Spark année par année (évite OOM).
-    list(downloads.values()) >> transforms[YEARS[0]]
+    list(downloads.values()) >> prepare_sections_key >> transforms[YEARS[0]]
     for prev_year, next_year in zip(YEARS, YEARS[1:]):
         transforms[prev_year] >> transforms[next_year]
 
-    transforms[YEARS[-1]] >> [report, report_silver_task, report_gold_task]
+    transforms[YEARS[-1]] >> refresh_stats_task
+    refresh_stats_task >> [report, report_silver_task, report_gold_task]
