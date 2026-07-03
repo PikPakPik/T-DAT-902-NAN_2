@@ -1,0 +1,4 @@
+"id_zone";"INSEE_C";"LIBGEO";"EPCI";"DEP";"REG";"loypredm2";"lwr.IPm2";"upr.IPm2";"TYPPRED";"nbobs_com";"nbobs_mail";"R2_adj"
+"1";"44109";"Nantes";"244400404";"44";"52";14,0;12,0;16,0;"commune";500;500;0,75
+"1";"35238";"Rennes";"243500139";"35";"53";11,8;9,5;14,0;"commune";300;300;0,68
+"1";"99999";"Inconnue";"200000000";"99";"52";9,0;7,0;11,0;"commune";10;10;0,50

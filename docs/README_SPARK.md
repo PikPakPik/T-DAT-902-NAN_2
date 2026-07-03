@@ -31,6 +31,22 @@ Pour tester un pipeline d'agrégation de données avec calcul de moyennes et de 
 docker compose run --rm spark /opt/spark/bin/spark-submit /opt/spark-jobs/tests/aggregation.py
 ```
 
+### 3. Charger les loyers ANIL dans PostgreSQL
+Après le DAG `download_carte_loyers` (fichiers dans `./airflow/data/carte_loyers/<année>/`) et le chargement des communes (`load_contours`) :
+```bash
+docker compose run --rm spark /opt/spark/bin/spark-submit /opt/spark-jobs/load_loyers.py --year 2024
+```
+
+Variables optionnelles : `LOYERS_YEAR`, `LOYERS_DATA_DIR` (défaut `/opt/airflow/data/carte_loyers`).
+
+### 4. Tests unitaires (`load_loyers.py`)
+Les tests PySpark utilisent des fixtures CSV minimales dans `spark-jobs/tests/fixtures/`.
+```bash
+docker compose run --rm spark bash -c \
+  "pip install -q -r /opt/spark-jobs/requirements-dev.txt && \
+   python -m pytest /opt/spark-jobs/tests/test_load_loyers.py -v"
+```
+
 ---
 
 ## 💡 Astuces & Bonnes Pratiques
