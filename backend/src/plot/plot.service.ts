@@ -315,7 +315,7 @@ export class PlotService {
       prixMoyenM2: this.#toNullableNumber(row.prixMoyenM2),
       surfaceM2: this.#toNullableNumber(row.surfaceM2),
       surfaceDisponibleM2: this.#toNullableNumber(row.surfaceDisponibleM2),
-      hasSale: row.hasSale,
+      hasSale: Boolean(row.hasSale),
       maxSaleAmount: this.#toNullableNumber(row.maxSaleAmount),
       sales: [],
     };

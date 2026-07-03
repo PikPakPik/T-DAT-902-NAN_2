@@ -69,11 +69,13 @@ export class CityDetailPanelComponent {
     return new Intl.NumberFormat('fr-FR').format(value);
   }
 
-  formatSuperficie(value: number): string {
+  formatSuperficie(value: number | null | undefined): string {
+    if (value == null) return '-';
     return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value);
   }
 
-  formatDensite(value: number): string {
+  formatDensite(value: number | null | undefined): string {
+    if (value == null) return '-';
     return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value);
   }
 
