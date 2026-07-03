@@ -51,6 +51,7 @@ describe('CityService', () => {
         id: 75056,
         name: 'Paris',
         code: '75056',
+        densite: null,
         geometry: '{"type":"MultiPolygon","coordinates":[]}',
         prixMedianM2: 9800.25,
       },

@@ -11,6 +11,33 @@ export interface PlotGql {
   name: string;
   geometry: string;
   prixMedianM2: number | null;
+  prixMoyenM2: number | null;
+  surfaceM2: number | null;
+  surfaceDisponibleM2: number | null;
+  hasSale: boolean;
+  maxSaleAmount: number | null;
+}
+
+export interface PlotSaleLotGql {
+  id: number;
+  typeLocal: string | null;
+  surfaceReelleBati: number | null;
+  nombrePiecesPrincipales: number | null;
+  surfaceTerrain: number | null;
+}
+
+export interface PlotSaleGql {
+  id: number;
+  dateMutation: string;
+  natureMutation: string;
+  valeurFonciere: number;
+  prixM2: number | null;
+  lots: PlotSaleLotGql[];
+}
+
+export interface PlotDetailsGql
+  extends Omit<PlotGql, 'geometry'> {
+  sales: PlotSaleGql[];
 }
 
 interface PlotsInBoundsQueryResponse {
@@ -21,9 +48,24 @@ interface PlotsBySectionQueryResponse {
   plotsBySection?: PlotGql[];
 }
 
+interface PlotDetailsQueryResponse {
+  plotDetails?: PlotDetailsGql | null;
+}
+
 export type PlotFeature = GeoJSON.Feature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  { id: number; number: string; name: string; prixMedianM2: number | null }
+  {
+    id: number;
+    number: string;
+    name: string;
+    prixMedianM2: number | null;
+    prixMoyenM2: number | null;
+    surfaceM2: number | null;
+    surfaceDisponibleM2: number | null;
+    hasSale: boolean;
+    maxSaleAmount: number | null;
+    maxSaleLabel: string | null;
+  }
 >;
 
 export type PlotsFeatureCollection = GeoJSON.FeatureCollection<
@@ -39,6 +81,11 @@ const QUERY_PLOTS_IN_BOUNDS = gql`
       name
       geometry
       prixMedianM2
+      prixMoyenM2
+      surfaceM2
+      surfaceDisponibleM2
+      hasSale
+      maxSaleAmount
     }
   }
 `;
@@ -51,6 +98,41 @@ const QUERY_PLOTS_BY_SECTION = gql`
       name
       geometry
       prixMedianM2
+      prixMoyenM2
+      surfaceM2
+      surfaceDisponibleM2
+      hasSale
+      maxSaleAmount
+    }
+  }
+`;
+
+const QUERY_PLOT_DETAILS = gql`
+  query PlotDetailsQuery($plotId: Int!) {
+    plotDetails(plotId: $plotId) {
+      id
+      number
+      name
+      prixMedianM2
+      prixMoyenM2
+      surfaceM2
+      surfaceDisponibleM2
+      hasSale
+      maxSaleAmount
+      sales {
+        id
+        dateMutation
+        natureMutation
+        valeurFonciere
+        prixM2
+        lots {
+          id
+          typeLocal
+          surfaceReelleBati
+          nombrePiecesPrincipales
+          surfaceTerrain
+        }
+      }
     }
   }
 `;
@@ -110,6 +192,19 @@ export class PlotsGraphqlService {
     };
   }
 
+  async fetchDetails(plotId: number): Promise<PlotDetailsGql | null> {
+    const result = await firstValueFrom(
+      this.#apollo.query<PlotDetailsQueryResponse>({
+        query: QUERY_PLOT_DETAILS,
+        variables: { plotId },
+        fetchPolicy: 'no-cache',
+        errorPolicy: 'none',
+      }),
+    );
+
+    return result.data?.plotDetails ?? null;
+  }
+
   async #fetchInBounds(viewport: MapBounds): Promise<PlotsFeatureCollection> {
     const fetchBounds = buildFetchBounds(viewport, MAP_BOUNDS_FETCH_PADDING);
 
@@ -139,10 +234,25 @@ export class PlotsGraphqlService {
         number: plot.number,
         name: plot.name,
         prixMedianM2: plot.prixMedianM2,
+        prixMoyenM2: plot.prixMoyenM2,
+        surfaceM2: plot.surfaceM2,
+        surfaceDisponibleM2: plot.surfaceDisponibleM2,
+        hasSale: plot.hasSale,
+        maxSaleAmount: plot.maxSaleAmount,
+        maxSaleLabel: this.#formatCurrency(plot.maxSaleAmount),
       },
       geometry: JSON.parse(plot.geometry) as
         | GeoJSON.Polygon
         | GeoJSON.MultiPolygon,
     };
+  }
+
+  #formatCurrency(value: number | null): string | null {
+    if (value == null || !Number.isFinite(value) || value <= 0) return null;
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    }).format(value);
   }
 }

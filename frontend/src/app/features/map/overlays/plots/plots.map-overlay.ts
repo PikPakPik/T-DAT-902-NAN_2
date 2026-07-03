@@ -1,20 +1,41 @@
 import * as mapboxgl from 'mapbox-gl';
 import { getPolygonFeatureCenter } from '../map-overlay-geo';
 import type { MapboxOverlay, MapOverlayContext } from '../map-overlay.types';
+import type { ExpressionSpecification } from 'mapbox-gl';
 import type { PlotsFeatureCollection } from '../../services/graphql/plots-graphql.service';
-import {
-  adminFillColorExpression,
-  formatPriceM2,
-} from '../shared/price-colors';
 
 const PLOTS_SOURCE_ID = 'plots-fr';
 const PLOTS_FILL_LAYER_ID = 'plots-fr-fill';
 const PLOTS_BORDER_LAYER_ID = 'plots-fr-borders';
+const PLOTS_SALE_LABEL_LAYER_ID = 'plots-fr-sale-labels';
+const PLOT_SELECT_MIN_ZOOM = 18.5;
 
 const EMPTY_COLLECTION: PlotsFeatureCollection = {
   type: 'FeatureCollection',
   features: [],
 };
+
+export type PlotSelectFn = (plotId: number) => void;
+
+function plotFillColorExpression(): ExpressionSpecification {
+  return [
+    'case',
+    ['boolean', ['get', 'hasSale'], false],
+    'rgba(168, 85, 247, 0.72)',
+    'rgba(255, 255, 255, 0.08)',
+  ];
+}
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return 'Vente DVF';
+  }
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export class PlotsMapOverlay implements MapboxOverlay {
   #geoJson: PlotsFeatureCollection = EMPTY_COLLECTION;
@@ -23,8 +44,11 @@ export class PlotsMapOverlay implements MapboxOverlay {
   #popup?: mapboxgl.Popup;
   #hoveredPlotId?: string | number;
   #onMove?: (e: mapboxgl.MapMouseEvent) => void;
+  #onClick?: (e: mapboxgl.MapMouseEvent) => void;
   #onLeave?: () => void;
   #interactionsBound = false;
+
+  constructor(private readonly onPlotSelect?: PlotSelectFn) {}
 
   attach(ctx: MapOverlayContext): void {
     this.#map = ctx.map;
@@ -55,6 +79,9 @@ export class PlotsMapOverlay implements MapboxOverlay {
       if (this.#onMove) {
         map.off('mousemove', PLOTS_FILL_LAYER_ID, this.#onMove);
       }
+      if (this.#onClick) {
+        map.off('click', PLOTS_FILL_LAYER_ID, this.#onClick);
+      }
       if (this.#onLeave) {
         map.off('mouseleave', PLOTS_FILL_LAYER_ID, this.#onLeave);
       }
@@ -71,6 +98,9 @@ export class PlotsMapOverlay implements MapboxOverlay {
     this.#interactionsBound = false;
 
     if (map) {
+      if (map.getLayer(PLOTS_SALE_LABEL_LAYER_ID)) {
+        map.removeLayer(PLOTS_SALE_LABEL_LAYER_ID);
+      }
       if (map.getLayer(PLOTS_FILL_LAYER_ID)) {
         map.removeLayer(PLOTS_FILL_LAYER_ID);
       }
@@ -83,6 +113,7 @@ export class PlotsMapOverlay implements MapboxOverlay {
     }
 
     this.#onMove = undefined;
+    this.#onClick = undefined;
     this.#onLeave = undefined;
     this.#map = undefined;
   }
@@ -105,7 +136,7 @@ export class PlotsMapOverlay implements MapboxOverlay {
         type: 'fill',
         source: PLOTS_SOURCE_ID,
         paint: {
-          'fill-color': adminFillColorExpression(),
+          'fill-color': plotFillColorExpression(),
           'fill-opacity': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
@@ -124,6 +155,42 @@ export class PlotsMapOverlay implements MapboxOverlay {
         paint: {
           'line-color': 'rgba(15, 23, 42, 0.65)',
           'line-width': 0.75,
+        },
+      });
+    }
+
+    if (!map.getLayer(PLOTS_SALE_LABEL_LAYER_ID)) {
+      map.addLayer({
+        id: PLOTS_SALE_LABEL_LAYER_ID,
+        type: 'symbol',
+        source: PLOTS_SOURCE_ID,
+        filter: ['all', ['==', ['get', 'hasSale'], true], ['has', 'maxSaleLabel']],
+        layout: {
+          'text-field': ['get', 'maxSaleLabel'],
+          'text-size': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            15,
+            10,
+            18,
+            12,
+            20,
+            13,
+          ],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-variable-anchor': ['center', 'top', 'bottom', 'left', 'right'],
+          'text-radial-offset': 0.55,
+          'text-padding': 8,
+          'text-allow-overlap': false,
+          'text-ignore-placement': false,
+          'symbol-sort-key': ['to-number', ['coalesce', ['get', 'maxSaleAmount'], 0]],
+        },
+        paint: {
+          'text-color': '#111827',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 4,
+          'text-halo-blur': 0,
         },
       });
     }
@@ -177,21 +244,41 @@ export class PlotsMapOverlay implements MapboxOverlay {
       const center = getPolygonFeatureCenter(feature);
       if (!center) return;
 
-      const name = feature.properties?.['name'] ?? 'Parcelle';
-      const prixRaw = feature.properties?.['prixMedianM2'];
-      const prix =
-        typeof prixRaw === 'number'
-          ? prixRaw
-          : prixRaw != null
-            ? Number(prixRaw)
+      const maxSaleRaw = feature.properties?.['maxSaleAmount'];
+      const maxSale =
+        typeof maxSaleRaw === 'number'
+          ? maxSaleRaw
+          : maxSaleRaw != null
+            ? Number(maxSaleRaw)
             : null;
 
       this.#popup
         ?.setLngLat(center)
         .setHTML(
-          `<div><strong>${name}</strong><br/><span>${formatPriceM2(prix)}</span></div>`,
+          `<div class="plot-sale-tooltip">${formatCurrency(maxSale)}</div>`,
         )
         .addTo(map);
+    };
+
+    this.#onClick = (e: mapboxgl.MapMouseEvent) => {
+      const feature = e.features?.[0];
+      if (!feature) return;
+
+      const rawId = feature?.properties?.['id'] ?? feature?.id;
+      const plotId = typeof rawId === 'number' ? rawId : Number(rawId);
+      if (!Number.isFinite(plotId)) return;
+
+      const center = getPolygonFeatureCenter(feature);
+      if (center) {
+        map.easeTo({
+          center,
+          zoom: Math.min(Math.max(map.getZoom(), PLOT_SELECT_MIN_ZOOM), 20),
+          duration: 650,
+          essential: true,
+        });
+      }
+
+      this.onPlotSelect?.(plotId);
     };
 
     this.#onLeave = () => {
@@ -208,6 +295,7 @@ export class PlotsMapOverlay implements MapboxOverlay {
     };
 
     map.on('mousemove', PLOTS_FILL_LAYER_ID, this.#onMove);
+    map.on('click', PLOTS_FILL_LAYER_ID, this.#onClick);
     map.on('mouseleave', PLOTS_FILL_LAYER_ID, this.#onLeave);
   }
 }

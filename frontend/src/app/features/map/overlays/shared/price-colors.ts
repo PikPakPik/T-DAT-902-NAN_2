@@ -13,11 +13,19 @@ export const ADMIN_NO_DATA_COLOR = 'rgba(148, 163, 184, 0.55)';
 
 /** Seuils €/m² pour l'échelle vert → jaune → orange → rouge. */
 export const ADMIN_PRICE_STOPS: readonly [number, string][] = [
-  [1500, '#22c55e'],
-  [2500, '#eab308'],
-  [4000, '#f97316'],
-  [6000, '#ef4444'],
+  [594, '#38d96f'],
+  [2500, '#c8f23a'],
+  [3740, '#facc15'],
+  [5200, '#f97316'],
+  [6886, '#dc2626'],
 ];
+
+export const PRICE_LEGEND = {
+  title: 'Prix au m²',
+  min: '< 594 €',
+  mid: '3740 €',
+  max: '> 6886 €',
+} as const;
 
 /** Expression Mapbox : gris sans données, sinon dégradé selon prixMedianM2. */
 export function adminFillColorExpression(): ExpressionSpecification {

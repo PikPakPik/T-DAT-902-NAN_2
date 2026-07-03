@@ -7,7 +7,7 @@ import {
   Index,
 } from 'typeorm';
 import { Section } from '../section/section.entity';
-import { Mutation } from '../mutation/mutation.entity';
+import { MutationLocal } from '../mutation/mutation-local.entity';
 import { Dpe } from '../dpe/dpe.entity';
 
 @Index('idx_plots_geom', ['geom'], { spatial: true })
@@ -29,8 +29,8 @@ export class Plot {
   @ManyToOne(() => Section, (section) => section.plots)
   section: Section;
 
-  @OneToMany(() => Mutation, (mutation) => mutation.plot)
-  mutations: Mutation[];
+  @OneToMany(() => MutationLocal, (local) => local.plot)
+  mutationLocals: MutationLocal[];
 
   @OneToMany(() => Dpe, (dpe) => dpe.plot)
   dpes: Dpe[];

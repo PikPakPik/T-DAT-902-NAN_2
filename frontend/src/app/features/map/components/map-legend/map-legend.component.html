@@ -1,0 +1,31 @@
+@if (visible()) {
+  <div class="map-legend" aria-label="Légende de la carte">
+    <div class="map-legend__title-row">
+      <span>{{ title() }}</span>
+      @if (scope()) {
+        <strong>{{ scope() }}</strong>
+      }
+    </div>
+
+    @if (gradient(); as gradientName) {
+      <div
+        class="map-legend__bar"
+        [class.map-legend__bar--price]="gradientName === 'price'"
+      ></div>
+      <div class="map-legend__labels">
+        @for (label of labels(); track label) {
+          <span>{{ label }}</span>
+        }
+      </div>
+    } @else if (entries().length) {
+      <div class="map-legend__entries">
+        @for (entry of entries(); track entry.label) {
+          <div class="map-legend__entry">
+            <span class="map-legend__swatch" [style.background]="entry.color"></span>
+            <span>{{ entry.label }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

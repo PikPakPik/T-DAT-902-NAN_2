@@ -25,10 +25,23 @@
   } @else {
     <div #map class="map"></div>
     <map-filter-panel (filterChanged)="onFilterChanged($event)" />
+    <map-legend
+      [visible]="activeFilter() === 'prix_m2' && mapLegendVisible()"
+      [title]="priceLegend.title"
+      [scope]="legendScope()"
+      gradient="price"
+      [labels]="priceLegendLabelValues()"
+    />
+    <map-legend
+      [visible]="activeFilter() === 'densite' && mapLegendVisible()"
+      title="Densité"
+      scope="Population"
+      [entries]="densityLegend"
+    />
   }
 
   <city-detail-panel
-    [visible]="panelVisible()"
+    [visible]="panelVisible() && panelMode() === 'city'"
     [loading]="insightsLoading()"
     [error]="insightsError()"
     [city]="selectedCity()"
@@ -37,5 +50,12 @@
     [populationHistory]="cityPopulationHistory()"
     (closed)="onPanelClosed()"
   />
-</div>
 
+  <plot-detail-panel
+    [visible]="panelVisible() && panelMode() === 'plot'"
+    [loading]="plotLoading()"
+    [error]="plotError()"
+    [plot]="selectedPlot()"
+    (closed)="onPanelClosed()"
+  />
+</div>

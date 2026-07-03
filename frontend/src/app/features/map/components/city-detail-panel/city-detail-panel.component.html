@@ -163,15 +163,15 @@
             <p class="demographie__unit">habitants</p>
             <p class="demographie__year">Recensement INSEE {{ pop.annee }}</p>
 
-            @if (pop.superficie != null || pop.densite != null) {
+            @if (pop.superficie !== null || pop.densite !== null) {
               <div class="demographie__stats-grid">
-                @if (pop.superficie != null) {
+                @if (pop.superficie !== null) {
                   <div class="demographie__stat">
                     <span class="demographie__stat-value">{{ formatSuperficie(pop.superficie) }} km²</span>
                     <span class="demographie__stat-label">Superficie</span>
                   </div>
                 }
-                @if (pop.densite != null) {
+                @if (pop.densite !== null) {
                   <div class="demographie__stat">
                     <span class="demographie__stat-value">{{ formatDensite(pop.densite) }}</span>
                     <span class="demographie__stat-label">hab/km²</span>

@@ -45,6 +45,22 @@ export class RegionsMapOverlay implements MapboxOverlay {
     this.attach(ctx);
   }
 
+  setVisible(visible: boolean): void {
+    const map = this.#map;
+    if (!map) return;
+
+    const visibility = visible ? 'visible' : 'none';
+    if (map.getLayer(REGIONS_FILL_LAYER_ID)) {
+      map.setLayoutProperty(REGIONS_FILL_LAYER_ID, 'visibility', visibility);
+    }
+    if (map.getLayer(REGIONS_BORDER_LAYER_ID)) {
+      map.setLayoutProperty(REGIONS_BORDER_LAYER_ID, 'visibility', visibility);
+    }
+    if (!visible) {
+      this.#clearHoverState();
+    }
+  }
+
   destroy(): void {
     const map = this.#map;
     if (map) {

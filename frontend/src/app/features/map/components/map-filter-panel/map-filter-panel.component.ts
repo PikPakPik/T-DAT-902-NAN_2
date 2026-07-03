@@ -1,5 +1,4 @@
 import { Component, output, signal } from '@angular/core';
-import { DENSITY_LEGEND } from '../../overlays/shared/density-colors';
 import {
   DEFAULT_MAP_FILTERS,
   type MapFilter,
@@ -13,14 +12,12 @@ import {
   styleUrl: './map-filter-panel.component.scss',
 })
 export class MapFilterPanelComponent {
-  readonly filterChanged = output<MapFilterId | null>();
+  readonly filterChanged = output<MapFilterId>();
 
   readonly #open = signal(false);
   readonly open = this.#open.asReadonly();
 
   readonly filters = signal<MapFilter[]>(structuredClone(DEFAULT_MAP_FILTERS));
-
-  readonly densityLegend = DENSITY_LEGEND;
 
   get activeFilter(): MapFilter | undefined {
     return this.filters().find((f) => f.active);
@@ -34,10 +31,9 @@ export class MapFilterPanelComponent {
     this.filters.update((filters) =>
       filters.map((f) => ({
         ...f,
-        active: f.id === id ? !f.active : false,
+        active: f.id === id,
       })),
     );
-    const active = this.filters().find((f) => f.active);
-    this.filterChanged.emit(active?.id ?? null);
+    this.filterChanged.emit(id);
   }
 }

@@ -87,7 +87,11 @@ export class CountriesMapOverlay implements MapboxOverlay {
           ],
           'fill-opacity': 1,
         },
-        filter: ['!=', ['get', 'name'], 'France'],
+        filter: [
+          'all',
+          ['!=', ['get', 'name'], 'France'],
+          ['!=', ['get', 'name'], 'Monaco'],
+        ],
       });
     }
 
