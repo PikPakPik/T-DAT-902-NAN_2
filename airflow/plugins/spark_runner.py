@@ -52,6 +52,81 @@ DPE_SPARK_CONFS = (
 )
 TRUTHY_VALUES = ("1", "true", "yes")
 
+DVF_STATS_SECTIONS_SQL = """
+WITH base AS (
+  SELECT
+    s.id AS section_id,
+    m.annee,
+    ml.type_local,
+    m.prix_m2::numeric AS prix_m2,
+    ml.surface_reelle_bati::numeric AS surface_reelle_bati
+  FROM mutations m
+  INNER JOIN mutation_locals ml ON ml."mutationId" = m.id
+  INNER JOIN plots p ON p.id = ml."plotId"
+  INNER JOIN sections s ON s.id = p."sectionId"
+  WHERE m.prix_m2 IS NOT NULL
+    AND m.prix_m2 > 0
+    AND ml.surface_reelle_bati IS NOT NULL
+    AND ml.surface_reelle_bati > 0
+    AND ml.type_local IN ('Maison', 'Appartement')
+),
+aggregated AS (
+  SELECT
+    section_id,
+    annee,
+    type_local,
+    ROUND(
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2)::numeric,
+      2
+    ) AS prix_median_m2,
+    ROUND(AVG(prix_m2), 2) AS prix_moyen_m2,
+    ROUND(
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY surface_reelle_bati)::numeric,
+      2
+    ) AS surface_mediane,
+    COUNT(*)::integer AS nb_transactions
+  FROM base
+  GROUP BY section_id, annee, type_local
+),
+with_evolution AS (
+  SELECT
+    *,
+    LAG(prix_median_m2) OVER (
+      PARTITION BY section_id, type_local
+      ORDER BY annee
+    ) AS previous_prix_median_m2
+  FROM aggregated
+)
+INSERT INTO stats_sections (
+  "sectionId",
+  annee,
+  type_local,
+  prix_median_m2,
+  prix_moyen_m2,
+  surface_mediane,
+  nb_transactions,
+  evolution_prix_pct
+)
+SELECT
+  section_id,
+  annee,
+  type_local,
+  prix_median_m2,
+  prix_moyen_m2,
+  surface_mediane,
+  nb_transactions,
+  COALESCE(
+    ROUND(
+      ((prix_median_m2 - previous_prix_median_m2)
+        / NULLIF(previous_prix_median_m2, 0)
+      ) * 100,
+      2
+    ),
+    0
+  ) AS evolution_prix_pct
+FROM with_evolution
+"""
+
 DVF_STATS_CITIES_SQL = """
 WITH base AS (
   SELECT
@@ -314,8 +389,11 @@ def refresh_dvf_stats() -> None:
     conn = psycopg2.connect(**pg_conn_params())
     try:
         with conn.cursor() as cur:
-            print("stats_cities/stats_departments : suppression anciennes stats DVF")
-            cur.execute("TRUNCATE stats_cities, stats_departments RESTART IDENTITY")
+            print("stats_sections/stats_cities/stats_departments : suppression anciennes stats DVF")
+            cur.execute("TRUNCATE stats_sections, stats_cities, stats_departments RESTART IDENTITY")
+            print("stats_sections : calcul depuis mutations liees aux parcelles")
+            cur.execute(DVF_STATS_SECTIONS_SQL)
+            print(f"stats_sections : {cur.rowcount} ligne(s) inseree(s)")
             print("stats_cities : calcul depuis mutations liees aux parcelles")
             cur.execute(DVF_STATS_CITIES_SQL)
             print(f"stats_cities : {cur.rowcount} ligne(s) inseree(s)")
@@ -531,6 +609,8 @@ def report_dvf_mutations_db() -> None:
             total_locals = cur.fetchone()[0]
             cur.execute('SELECT COUNT(*) FROM mutation_locals WHERE "plotId" IS NOT NULL')
             with_plot = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM stats_sections")
+            total_section_stats = cur.fetchone()[0]
             cur.execute("SELECT COUNT(*) FROM stats_cities")
             total_city_stats = cur.fetchone()[0]
             cur.execute("SELECT COUNT(*) FROM stats_departments")
@@ -541,6 +621,7 @@ def report_dvf_mutations_db() -> None:
             by_year = cur.fetchall()
         print(f"mutations : {total} vente(s) en base")
         print(f"mutation_locals : {total_locals} lot(s) ({with_plot} lie(s) a une parcelle)")
+        print(f"stats_sections : {total_section_stats} ligne(s)")
         print(f"stats_cities : {total_city_stats} ligne(s)")
         print(f"stats_departments : {total_department_stats} ligne(s)")
         for annee, n in by_year:

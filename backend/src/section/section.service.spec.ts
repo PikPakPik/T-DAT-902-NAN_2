@@ -42,6 +42,8 @@ describe('SectionService', () => {
     expect(sql).toContain('sections s');
     expect(sql).toContain('s.geom && ST_MakeEnvelope');
     expect(sql).toContain('ST_Intersects(s.geom, ST_MakeEnvelope');
+    expect(sql).toContain('stats_sections');
+    expect(sql).not.toContain('mutation_locals');
     expect(params).toEqual([
       parisBounds.topLeftLng,
       parisBounds.bottomRightLat,
@@ -69,6 +71,7 @@ describe('SectionService', () => {
       expect.stringContaining('s."cityId" = $1'),
       [75056],
     );
+    expect(query.mock.calls[0][0]).toContain('stats_sections');
     expect(sections).toHaveLength(1);
     expect(sections[0]?.name).toBe('750560001');
   });

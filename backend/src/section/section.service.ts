@@ -40,25 +40,6 @@ export class SectionService {
         INNER JOIN cities c ON c.id = s."cityId"
         WHERE s.geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)
           AND ST_Intersects(s.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326))
-      ),
-      section_mutations AS (
-        SELECT DISTINCT
-          p."sectionId" AS section_id,
-          m.id AS mutation_id,
-          m.prix_m2
-        FROM plots p
-        INNER JOIN visible_sections vs ON vs.id = p."sectionId"
-        INNER JOIN mutation_locals ml ON ml."plotId" = p.id
-        INNER JOIN mutations m ON m.id = ml."mutationId"
-        WHERE m.prix_m2 IS NOT NULL
-          AND m.prix_m2 > 0
-      ),
-      section_prices AS (
-        SELECT
-          section_id,
-          ROUND(AVG(prix_m2)::numeric, 2) AS prix_median_m2
-        FROM section_mutations
-        GROUP BY section_id
       )
       SELECT
         vs.id,
@@ -66,9 +47,16 @@ export class SectionService {
         vs.prefixe,
         vs.name,
         ST_AsGeoJSON(vs.geom)::text AS geometry,
-        sp.prix_median_m2 AS "prixMedianM2"
+        (
+          SELECT ROUND(
+            SUM(ss.prix_median_m2 * ss.nb_transactions)::numeric
+            / NULLIF(SUM(ss.nb_transactions), 0),
+            2
+          )
+          FROM stats_sections ss
+          WHERE ss."sectionId" = vs.id
+        ) AS "prixMedianM2"
       FROM visible_sections vs
-      LEFT JOIN section_prices sp ON sp.section_id = vs.id
       ORDER BY vs.name
     `,
       [west, south, east, north],
@@ -90,25 +78,6 @@ export class SectionService {
         FROM sections s
         INNER JOIN cities c ON c.id = s."cityId"
         WHERE s."cityId" = $1
-      ),
-      section_mutations AS (
-        SELECT DISTINCT
-          p."sectionId" AS section_id,
-          m.id AS mutation_id,
-          m.prix_m2
-        FROM plots p
-        INNER JOIN city_sections cs ON cs.id = p."sectionId"
-        INNER JOIN mutation_locals ml ON ml."plotId" = p.id
-        INNER JOIN mutations m ON m.id = ml."mutationId"
-        WHERE m.prix_m2 IS NOT NULL
-          AND m.prix_m2 > 0
-      ),
-      section_prices AS (
-        SELECT
-          section_id,
-          ROUND(AVG(prix_m2)::numeric, 2) AS prix_median_m2
-        FROM section_mutations
-        GROUP BY section_id
       )
       SELECT
         cs.id,
@@ -116,9 +85,16 @@ export class SectionService {
         cs.prefixe,
         cs.name,
         ST_AsGeoJSON(cs.geom)::text AS geometry,
-        sp.prix_median_m2 AS "prixMedianM2"
+        (
+          SELECT ROUND(
+            SUM(ss.prix_median_m2 * ss.nb_transactions)::numeric
+            / NULLIF(SUM(ss.nb_transactions), 0),
+            2
+          )
+          FROM stats_sections ss
+          WHERE ss."sectionId" = cs.id
+        ) AS "prixMedianM2"
       FROM city_sections cs
-      LEFT JOIN section_prices sp ON sp.section_id = cs.id
       ORDER BY cs.name
     `,
       [cityId],
