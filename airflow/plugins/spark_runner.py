@@ -17,6 +17,7 @@ RECENSEMENT_POPULATION_JOB = "/opt/spark-jobs/silver/recensement_population.py"
 DVF_MUTATIONS_JOB = "/opt/spark-jobs/silver/dvf_mutations.py"
 PREPARE_SECTIONS_KEY_JOB = "/opt/spark-jobs/silver/prepare_sections_key.py"
 LOYERS_LOAD_JOB = "/opt/spark-jobs/load_loyers.py"
+DPE_LOAD_JOB = "/opt/spark-jobs/silver/dpe_load.py"
 SPARK_CONTAINER = os.environ.get("SPARK_CONTAINER_NAME", "homepedia-spark")
 SPARK_POSTGRES_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
 # Chemins data : tout *_DOWNLOAD_DIR / *_SILVER_DIR / *_REJECTS_DIR est transmis
@@ -256,6 +257,10 @@ def run_recensement_population_spark() -> None:
     run_spark_submit(RECENSEMENT_POPULATION_JOB)
 
 
+def run_dpe_load_spark() -> None:
+    run_spark_submit(DPE_LOAD_JOB)
+
+
 def run_dvf_mutations_spark(year: int, link_plots: bool = False) -> None:
     extra_args = ["--year", str(year)]
     # Liaison plotId activable via env (plots = 94M lignes, opt-in).
@@ -364,6 +369,22 @@ def report_delinquance_crimes_silver() -> None:
             print(f"{name}/ (Parquet)")
 
 
+def report_dpes_silver() -> None:
+    silver_dir = os.environ.get("DPE_SILVER_DIR", "/opt/airflow/data/silver/dpe/dpes")
+    if not os.path.isdir(silver_dir):
+        print(f"Aucune donnee silver dans {silver_dir}")
+        return
+    for name in sorted(os.listdir(silver_dir)):
+        path = os.path.join(silver_dir, name)
+        if name.endswith(".csv") and os.path.isfile(path):
+            with open(path, encoding="utf-8") as fh:
+                rows = max(sum(1 for _ in fh) - 1, 0)
+            size_kb = os.path.getsize(path) / 1024
+            print(f"{name}: {rows} DPE ({size_kb:.1f} KB)")
+        elif name.endswith(".parquet") and os.path.isdir(path):
+            print(f"{name}/ (Parquet)")
+
+
 def report_recensement_population_silver() -> None:
     silver_dir = os.environ.get(
         "RECENSEMENT_SILVER_DIR", "/opt/airflow/data/silver/recensement/population"
@@ -424,6 +445,32 @@ def report_delinquance_crimes_db() -> None:
         print(f"crimes_cities : {total} ligne(s) en base")
         for annee, n in by_year:
             print(f"  annee {annee}: {n}")
+    finally:
+        conn.close()
+
+
+def report_dpes_db() -> None:
+    try:
+        import psycopg2
+    except ImportError:
+        print("psycopg2 indisponible — rapport base ignore")
+        return
+
+    conn = psycopg2.connect(**pg_conn_params())
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM dpes")
+            total = cur.fetchone()[0]
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM dpes
+                WHERE "plotId" IS NOT NULL
+                """
+            )
+            linked = cur.fetchone()[0]
+        print(f"dpes : {total} ligne(s) en base")
+        print(f"  plotId renseignes : {linked}")
     finally:
         conn.close()
 

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import os
+import gzip
 from datetime import datetime, timedelta
 from urllib.error import URLError
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 from airflow import DAG
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
+
+from spark_runner import pg_conn_params, run_spark_submit
 
 
 # data.ademe.fr s'appuie sur data-fair. Les datasets DPE sont des bases sans
@@ -23,6 +26,35 @@ PAGE_SIZE = int(os.environ.get("DPE_PAGE_SIZE", "10000"))  # 10000 = max data-fa
 DOWNLOAD_DIR = os.environ.get("DPE_DOWNLOAD_DIR", "/opt/airflow/data/ademe_dpe")
 
 DATASETS = ["dpe03existant", "dpe01tertiaire"]
+DPE_LOAD_JOB = "/opt/spark-jobs/silver/dpe_load.py"
+
+DPE_SELECT_COLUMNS = {
+    "dpe03existant": [
+        "numero_dpe",
+        "date_etablissement_dpe",
+        "etiquette_dpe",
+        "etiquette_ges",
+        "type_batiment",
+        "annee_construction",
+        "surface_habitable_logement",
+        "surface_habitable_immeuble",
+        "code_insee_ban",
+        "coordonnee_cartographique_x_ban",
+        "coordonnee_cartographique_y_ban",
+    ],
+    "dpe01tertiaire": [
+        "numero_dpe",
+        "date_etablissement_dpe",
+        "etiquette_dpe",
+        "etiquette_ges",
+        "annee_construction",
+        "surface_utile",
+        "surface_shon",
+        "code_insee_ban",
+        "coordonnee_cartographique_x_ban",
+        "coordonnee_cartographique_y_ban",
+    ],
+}
 
 
 def _next_url(link_header: str | None) -> str | None:
@@ -38,13 +70,21 @@ def _next_url(link_header: str | None) -> str | None:
     return None
 
 
+def _dataset_url(dataset: str) -> str:
+    params = {"format": "csv", "size": str(PAGE_SIZE)}
+    columns = DPE_SELECT_COLUMNS.get(dataset)
+    if columns:
+        params["select"] = ",".join(columns)
+    return f"{DATA_FAIR_BASE}/{quote(dataset)}/lines?{urlencode(params)}"
+
+
 def download_dpe(dataset: str, **context) -> None:
     max_rows = int((context.get("params") or {}).get("max_rows", 0))
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     target = os.path.join(DOWNLOAD_DIR, f"{dataset}.csv")
     tmp = f"{target}.part"
 
-    url: str | None = f"{DATA_FAIR_BASE}/{quote(dataset)}/lines?format=csv&size={PAGE_SIZE}"
+    url: str | None = _dataset_url(dataset)
     rows = 0
     pages = 0
     first = True
@@ -52,12 +92,17 @@ def download_dpe(dataset: str, **context) -> None:
     try:
         with open(tmp, "wb") as fh:
             while url:
-                request = Request(url, headers={"User-Agent": USER_AGENT})
+                request = Request(
+                    url,
+                    headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"},
+                )
                 with urlopen(request, timeout=600) as response:
                     if response.getcode() != 200:
                         raise RuntimeError(f"Unexpected HTTP status {response.getcode()} for {url}")
                     data = response.read()
                     link_header = response.headers.get("Link")
+                    if response.headers.get("Content-Encoding") == "gzip":
+                        data = gzip.decompress(data)
 
                 if first:
                     fh.write(data)
@@ -101,6 +146,52 @@ def report_downloads() -> None:
         print(f"  - {f}")
 
 
+def run_dpe_load_spark() -> None:
+    run_spark_submit(DPE_LOAD_JOB)
+
+
+def report_dpes_silver() -> None:
+    silver_dir = os.environ.get("DPE_SILVER_DIR", "/opt/airflow/data/silver/dpe/dpes")
+    if not os.path.isdir(silver_dir):
+        print(f"Aucune donnee silver dans {silver_dir}")
+        return
+    for name in sorted(os.listdir(silver_dir)):
+        path = os.path.join(silver_dir, name)
+        if name.endswith(".csv") and os.path.isfile(path):
+            with open(path, encoding="utf-8") as fh:
+                rows = max(sum(1 for _ in fh) - 1, 0)
+            size_kb = os.path.getsize(path) / 1024
+            print(f"{name}: {rows} DPE ({size_kb:.1f} KB)")
+        elif name.endswith(".parquet") and os.path.isdir(path):
+            print(f"{name}/ (Parquet)")
+
+
+def report_dpes_db() -> None:
+    try:
+        import psycopg2
+    except ImportError:
+        print("psycopg2 indisponible — rapport base ignore")
+        return
+
+    conn = psycopg2.connect(**pg_conn_params())
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM dpes")
+            total = cur.fetchone()[0]
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM dpes
+                WHERE "plotId" IS NOT NULL
+                """
+            )
+            linked = cur.fetchone()[0]
+        print(f"dpes : {total} ligne(s) en base")
+        print(f"  plotId renseignes : {linked}")
+    finally:
+        conn.close()
+
+
 with DAG(
     dag_id="download_ademe_dpe",
     description="Telecharge les DPE ADEME (logements existants, tertiaire) au format CSV depuis data.ademe.fr",
@@ -129,4 +220,21 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    downloads >> report
+    load_dpes = PythonOperator(
+        task_id="load_dpes_spark",
+        python_callable=run_dpe_load_spark,
+    )
+
+    report_silver_task = PythonOperator(
+        task_id="report_dpes_silver",
+        python_callable=report_dpes_silver,
+        trigger_rule="all_done",
+    )
+
+    report_db_task = PythonOperator(
+        task_id="report_dpes_db",
+        python_callable=report_dpes_db,
+        trigger_rule="all_done",
+    )
+
+    downloads >> load_dpes >> [report, report_silver_task, report_db_task]

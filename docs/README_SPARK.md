@@ -39,7 +39,18 @@ docker compose run --rm spark /opt/spark/bin/spark-submit /opt/spark-jobs/load_l
 
 Variables optionnelles : `LOYERS_YEAR`, `LOYERS_DATA_DIR` (défaut `/opt/airflow/data/carte_loyers`).
 
-### 4. Tests unitaires (`load_loyers.py`)
+### 4. Charger les DPE ADEME dans PostgreSQL
+Après le DAG `download_ademe_dpe` (fichiers dans `./airflow/data/ademe_dpe/`) et le chargement du cadastre :
+```bash
+docker compose run --rm spark /opt/spark/bin/spark-submit \
+  --jars /opt/spark/jars/postgresql-42.7.3.jar \
+  /opt/spark-jobs/silver/dpe_load.py
+```
+
+Variables optionnelles : `DPE_DOWNLOAD_DIR`, `DPE_SILVER_DIR`, `DPE_REJECTS_DIR`.
+Ajouter `--skip-db` pour produire uniquement les fichiers silver/rejets, ou `--skip-link-plots` pour ne pas remplir `dpes.plotId`.
+
+### 5. Tests unitaires (`load_loyers.py`)
 Les tests PySpark utilisent des fixtures CSV minimales dans `spark-jobs/tests/fixtures/`.
 ```bash
 docker compose run --rm spark bash -c \

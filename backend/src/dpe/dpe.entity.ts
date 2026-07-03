@@ -40,9 +40,9 @@ export class Dpe {
   @Column({ type: 'varchar' })
   code_insee: string;
 
-  @Column({ type: 'point' })
+  @Column({ type: 'double precision' })
   longitude: number;
 
-  @Column({ type: 'point' })
+  @Column({ type: 'double precision' })
   latitude: number;
 }
