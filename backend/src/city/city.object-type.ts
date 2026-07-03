@@ -8,13 +8,22 @@ export class PopulationStatsType {
   @Field(() => Int)
   annee: number;
 
-  @Field(() => Float, { nullable: true, description: 'Superficie de la commune en km²' })
+  @Field(() => Float, {
+    nullable: true,
+    description: 'Superficie de la commune en km²',
+  })
   superficie: number | null;
 
-  @Field(() => Float, { nullable: true, description: 'Densité de population en hab/km²' })
+  @Field(() => Float, {
+    nullable: true,
+    description: 'Densité de population en hab/km²',
+  })
   densite: number | null;
 
-  @Field(() => Float, { nullable: true, description: 'Évolution vs année précédente en %' })
+  @Field(() => Float, {
+    nullable: true,
+    description: 'Évolution vs année précédente en %',
+  })
   evolutionPct: number | null;
 }
 

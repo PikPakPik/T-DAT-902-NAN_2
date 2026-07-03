@@ -42,7 +42,10 @@ export class PriceLegendService {
 
     let legend = this.#toLegend(rows[0], scopeSql.fallbackLabel);
 
-    if (legend.count === 0 && normalized.level !== PriceLegendScopeLevel.FRANCE) {
+    if (
+      legend.count === 0 &&
+      normalized.level !== PriceLegendScopeLevel.FRANCE
+    ) {
       const rawScopeSql = this.#rawScopeSql(normalized);
       const rawRows = await this.dataSource.query<PriceLegendRow[]>(
         this.#rawLegendQuery(rawScopeSql),

@@ -77,7 +77,12 @@ export class CityService {
     code: string,
   ): Promise<PopulationStatsType | null> {
     const rows = await this.cityRepository.query<
-      { population: string; annee: string; superficie: string; densite: string }[]
+      {
+        population: string;
+        annee: string;
+        superficie: string;
+        densite: string;
+      }[]
     >(
       `
       SELECT

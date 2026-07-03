@@ -78,11 +78,11 @@ export interface PriceLegendScope {
 
 export type LegendScopeChangeFn = (scope: PriceLegendScope) => void;
 
-type LegendFeatureProperties = {
+interface LegendFeatureProperties {
   id?: number;
   name?: string;
   code?: string;
-};
+}
 
 type LegendFeatureCollection = GeoJSON.FeatureCollection<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,

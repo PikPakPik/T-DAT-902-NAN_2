@@ -19,11 +19,11 @@ import { RegionsGraphqlService } from './services/graphql/regions-graphql.servic
 import { SectionsGraphqlService } from './services/graphql/sections-graphql.service';
 
 type PanelMode = 'city' | 'plot';
-type PriceLegendLabels = {
+interface PriceLegendLabels {
   min: string;
   mid: string;
   max: string;
-};
+}
 
 @Component({
   selector: 'map',

@@ -68,7 +68,7 @@
                       {{ sale.dateMutation | date: 'dd/MM/yyyy' }}
                     </time>
                   </span>
-                  @if (sale.prixM2 != null) {
+                  @if (sale.prixM2 !== null) {
                     <span>{{ formatPriceM2(sale.prixM2) }}</span>
                   }
                 </div>

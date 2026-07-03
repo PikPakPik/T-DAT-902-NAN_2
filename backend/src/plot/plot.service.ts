@@ -292,14 +292,16 @@ export class PlotService {
 
     return {
       ...this.#toType(plot),
-      sales: salesRows.map((sale): PlotSaleType => ({
-        id: sale.id,
-        dateMutation: sale.dateMutation,
-        natureMutation: sale.natureMutation,
-        valeurFonciere: Number(sale.valeurFonciere),
-        prixM2: this.#toNullableNumber(sale.prixM2),
-        lots: lotsBySale.get(sale.id) ?? [],
-      })),
+      sales: salesRows.map(
+        (sale): PlotSaleType => ({
+          id: sale.id,
+          dateMutation: sale.dateMutation,
+          natureMutation: sale.natureMutation,
+          valeurFonciere: Number(sale.valeurFonciere),
+          prixM2: this.#toNullableNumber(sale.prixM2),
+          lots: lotsBySale.get(sale.id) ?? [],
+        }),
+      ),
     };
   }
 
