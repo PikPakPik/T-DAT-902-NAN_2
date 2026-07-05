@@ -44,7 +44,6 @@ def build_global_document_frequency(reviews_col) -> tuple[dict[str, int], int]:
     pipeline = [
         {
             "$match": {
-                "sentiment_analyzed_at": {"$ne": None},
                 "comment": {"$exists": True, "$ne": ""},
             }
         },
@@ -80,7 +79,6 @@ def generate_wordclouds(*, method: str | None = None, top_n: int = TOP_N) -> dic
     pipeline = [
         {
             "$match": {
-                "sentiment_analyzed_at": {"$ne": None},
                 "comment": {"$exists": True, "$ne": ""},
             }
         },
