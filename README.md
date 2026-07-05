@@ -36,6 +36,11 @@ docker compose --profile scrapers up --build
 
 Documentation complète : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (diagrammes, composants, flux E2E, choix techniques).
 
+Documentation projet :
+
+- [Methodologie de nettoyage](docs/METHODOLOGIE_NETTOYAGE.md)
+- [IA / NLP](docs/IA_NLP.md)
+
 # Ressources
 
 [TDAT902 Sharepoint](https://epitechfr.sharepoint.com/sites/TDAT902/Documents%20partages/Forms/AllItems.aspx?FolderCTID=0x012000F564A00B5E98FE4380EF0C645E31A70D&id=%2Fsites%2FTDAT902%2FDocuments%20partages%2Fdata)  

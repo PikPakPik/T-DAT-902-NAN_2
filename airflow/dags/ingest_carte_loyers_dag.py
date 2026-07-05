@@ -83,8 +83,9 @@ with DAG(
     dag_id="download_carte_loyers",
     description="Telecharge les indicateurs de loyers par commune (carte des loyers) depuis data.gouv.fr",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     default_args={
         "retries": 3,
         "retry_delay": timedelta(minutes=2),

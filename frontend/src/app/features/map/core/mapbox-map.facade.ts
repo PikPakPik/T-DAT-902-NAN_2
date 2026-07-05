@@ -2,6 +2,7 @@ import * as mapboxgl from 'mapbox-gl';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import {
   MAP_CITIES_MIN_ZOOM,
+  MAP_DEVICES_MIN_ZOOM,
   MAP_DETAIL_MIN_ZOOM,
   MAP_PLOTS_MIN_ZOOM,
   MAP_SECTIONS_MIN_ZOOM,
@@ -9,12 +10,14 @@ import {
 import { CitiesMapOverlay } from '../overlays/cities/cities.map-overlay';
 import { CountriesMapOverlay } from '../overlays/countries/countries.map-overlay';
 import { DepartmentsMapOverlay } from '../overlays/departments/departments.map-overlay';
+import { DevicesMapOverlay } from '../overlays/devices/devices.map-overlay';
 import { MapOverlayStack } from '../overlays/map-overlay-stack';
 import { PlotsMapOverlay } from '../overlays/plots/plots.map-overlay';
 import { RegionsMapOverlay } from '../overlays/regions/regions.map-overlay';
 import { SectionsMapOverlay } from '../overlays/sections/sections.map-overlay';
 import type { CitiesFeatureCollection } from '../services/graphql/cities-graphql.service';
 import type { DepartmentsFeatureCollection } from '../services/graphql/departments-graphql.service';
+import type { DevicesFeatureCollection } from '../services/graphql/devices-graphql.service';
 import type { PlotsFeatureCollection } from '../services/graphql/plots-graphql.service';
 import type { RegionsFeatureCollection } from '../services/graphql/regions-graphql.service';
 import type { SectionsFeatureCollection } from '../services/graphql/sections-graphql.service';
@@ -44,6 +47,11 @@ const EMPTY_PLOTS: PlotsFeatureCollection = {
   features: [],
 };
 
+const EMPTY_DEVICES: DevicesFeatureCollection = {
+  type: 'FeatureCollection',
+  features: [],
+};
+
 export type LoadDepartmentsFn = (
   bounds: MapBounds,
 ) => Promise<DepartmentsFeatureCollection>;
@@ -59,6 +67,10 @@ export type LoadSectionsFn = (
 export type LoadPlotsFn = (
   bounds: MapBounds,
 ) => Promise<PlotsFeatureCollection>;
+
+export type LoadDevicesFn = (
+  bounds: MapBounds,
+) => Promise<DevicesFeatureCollection>;
 
 export type CitySelectFn = (city: SelectedCity) => void;
 export type PlotSelectFn = (plotId: number) => void;
@@ -100,14 +112,17 @@ export class MapboxMapFacade {
   readonly #citiesOverlay: CitiesMapOverlay;
   readonly #sectionsOverlay: SectionsMapOverlay;
   readonly #plotsOverlay: PlotsMapOverlay;
+  readonly #devicesOverlay = new DevicesMapOverlay();
   readonly #loadDepartments?: LoadDepartmentsFn;
   readonly #loadCities?: LoadCitiesFn;
   readonly #loadSections?: LoadSectionsFn;
   readonly #loadPlots?: LoadPlotsFn;
+  readonly #loadDevices?: LoadDevicesFn;
   readonly #regionsGeoJson?: RegionsFeatureCollection;
   readonly #onLegendScopeChange?: LegendScopeChangeFn;
   #layerLoadSeq = 0;
   #onMoveEnd?: () => void;
+  #devicesVisible = false;
 
   constructor(
     private readonly token: string,
@@ -116,6 +131,7 @@ export class MapboxMapFacade {
     loadCities?: LoadCitiesFn,
     loadSections?: LoadSectionsFn,
     loadPlots?: LoadPlotsFn,
+    loadDevices?: LoadDevicesFn,
     onCitySelect?: CitySelectFn,
     onPlotSelect?: PlotSelectFn,
     onLegendScopeChange?: LegendScopeChangeFn,
@@ -124,6 +140,7 @@ export class MapboxMapFacade {
     this.#loadCities = loadCities;
     this.#loadSections = loadSections;
     this.#loadPlots = loadPlots;
+    this.#loadDevices = loadDevices;
     this.#regionsGeoJson = regionsGeoJson;
     this.#onLegendScopeChange = onLegendScopeChange;
 
@@ -140,6 +157,7 @@ export class MapboxMapFacade {
     this.#overlayStack.register(() => this.#citiesOverlay);
     this.#overlayStack.register(() => this.#sectionsOverlay);
     this.#overlayStack.register(() => this.#plotsOverlay);
+    this.#overlayStack.register(() => this.#devicesOverlay);
   }
 
   init(container: HTMLElement): void {
@@ -236,8 +254,19 @@ export class MapboxMapFacade {
       this.#citiesOverlay.setData(EMPTY_CITIES);
       this.#sectionsOverlay.setData(EMPTY_SECTIONS);
       this.#plotsOverlay.setData(EMPTY_PLOTS);
+      this.#devicesOverlay.setData(EMPTY_DEVICES);
       this.#updateLegendScopeFromRegions(zoom);
       return;
+    }
+
+    if (!this.#devicesVisible || zoom < MAP_DEVICES_MIN_ZOOM) {
+      this.#devicesOverlay.setData(EMPTY_DEVICES);
+    } else if (this.#loadDevices) {
+      const devicesGeoJson = await this.#loadDevices(mapBounds).catch(
+        () => EMPTY_DEVICES,
+      );
+      if (seq !== this.#layerLoadSeq) return;
+      this.#devicesOverlay.setData(devicesGeoJson);
     }
 
     if (zoom >= MAP_PLOTS_MIN_ZOOM) {
@@ -326,6 +355,15 @@ export class MapboxMapFacade {
 
   setChoropleth(key: MapFilterId): void {
     this.#citiesOverlay.setChoropleth(key);
+  }
+
+  setDevicesVisible(visible: boolean): void {
+    this.#devicesVisible = visible;
+    if (!visible) {
+      this.#devicesOverlay.setData(EMPTY_DEVICES);
+      return;
+    }
+    void this.#syncLayersForViewport();
   }
 
   destroy(): void {

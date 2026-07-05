@@ -3,8 +3,8 @@ load_bpe.py
 -----------
 Charge la Base permanente des equipements (BPE, INSEE) dans la table `devices`.
 
-Pour chaque equipement du CSV : on resout la commune via le code EPCI
-(colonne `cities.epci`) puis on insere une ligne dans `devices` avec le cityId.
+Pour chaque equipement du CSV : on resout la commune via DEPCOM (`cities.code`),
+puis fallback EPCI (`cities.epci`), et on insere une ligne dans `devices`.
 
 La table `devices` est une feuille (aucune table ne la reference) : on la
 TRUNCATE avant chargement pour que le DAG soit idempotent.
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import math
 import os
 
 import psycopg2
@@ -49,7 +50,67 @@ def _epci_to_city_id(cur: psycopg2.extensions.cursor) -> dict[str, int]:
     return {row[0]: row[1] for row in cur.fetchall()}
 
 
-def _device_rows(csv_files: list[str], epci_to_city: dict[str, int], stats: dict[str, int]):
+def _code_to_city_id(cur: psycopg2.extensions.cursor) -> dict[str, int]:
+    """Mapping {code INSEE commune -> id commune}."""
+    cur.execute(
+        """
+        SELECT upper(lpad(trim(code), 5, '0')), min(id)
+        FROM cities
+        WHERE code IS NOT NULL AND trim(code) <> ''
+        GROUP BY upper(lpad(trim(code), 5, '0'))
+        """
+    )
+    return {row[0]: row[1] for row in cur.fetchall()}
+
+
+def _clean_code(value: str | None) -> str:
+    value = (value or "").strip().upper()
+    if not value:
+        return ""
+    if value.isdigit():
+        return value.zfill(5)
+    return value
+
+
+def _parse_float(value: str | None) -> float | None:
+    value = (value or "").strip().replace(",", ".")
+    if not value:
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed
+
+
+def _resolve_city_id(
+    row: dict[str, str],
+    code_to_city: dict[str, int],
+    epci_to_city: dict[str, int],
+    stats: dict[str, int],
+) -> int | None:
+    city_id = code_to_city.get(_clean_code(row.get("DEPCOM")))
+    if city_id is not None:
+        stats["city_by_code"] += 1
+        return city_id
+
+    city_id = epci_to_city.get((row.get("EPCI") or "").strip())
+    if city_id is not None:
+        stats["city_by_epci"] += 1
+        return city_id
+
+    stats["skipped_city"] += 1
+    return None
+
+
+def _device_rows(
+    csv_files: list[str],
+    code_to_city: dict[str, int],
+    epci_to_city: dict[str, int],
+    stats: dict[str, int],
+):
     """Lit les CSV BPE et yield un tuple par equipement, pret pour l'insert.
 
     BPE INSEE : CSV UTF-8, separateur ';'. Les lignes sans coordonnees sont
@@ -59,6 +120,27 @@ def _device_rows(csv_files: list[str], epci_to_city: dict[str, int], stats: dict
         logger.info("[bpe] lecture %s", os.path.basename(path))
         with open(path, encoding="utf-8", errors="replace", newline="") as fh:
             for row in csv.DictReader(fh, delimiter=";"):
+                stats["read"] += 1
+                longitude = _parse_float(row.get("LONGITUDE"))
+                latitude = _parse_float(row.get("LATITUDE"))
+                if longitude is None or latitude is None:
+                    stats["skipped_coords"] += 1
+                    continue
+
+                city_id = _resolve_city_id(row, code_to_city, epci_to_city, stats)
+                if city_id is None:
+                    continue
+
+                if stats["read"] % 100000 == 0:
+                    logger.info(
+                        "[bpe] progression: %s lignes lues, %s a inserer, "
+                        "%s sans coordonnees, %s sans commune",
+                        stats["read"],
+                        stats["inserted"],
+                        stats["skipped_coords"],
+                        stats["skipped_city"],
+                    )
+
                 # Adresse = numero + type + libelle de voie (parties vides ecartees).
                 address = " ".join(
                     p for p in (row.get("NUMVOIE"), row.get("TYPVOIE"), row.get("LIBVOIE")) if p
@@ -68,9 +150,14 @@ def _device_rows(csv_files: list[str], epci_to_city: dict[str, int], stats: dict
                 yield (
                     row.get("NOMRS", ""),
                     address.strip(),
-                    float(row.get("LONGITUDE", "0")),
-                    float(row.get("LATITUDE", "0")),
-                    epci_to_city.get(row.get("EPCI", "")),
+                    row.get("TYPEQU", ""),
+                    row.get("CATEGORIE", ""),
+                    row.get("DOM", ""),
+                    row.get("SDOM", ""),
+                    row.get("LIBCOM", ""),
+                    longitude,
+                    latitude,
+                    city_id,
                 )
 
 
@@ -88,27 +175,39 @@ def load_bpe(**_context) -> None:
 
     conn = get_conn()
     try:
-        stats = {"inserted": 0, "skipped": 0}
+        stats = {
+            "read": 0,
+            "inserted": 0,
+            "skipped_coords": 0,
+            "skipped_city": 0,
+            "city_by_code": 0,
+            "city_by_epci": 0,
+        }
         with conn.cursor() as cur:
+            code_to_city = _code_to_city_id(cur)
             epci_to_city = _epci_to_city_id(cur)
             cur.execute("TRUNCATE TABLE devices RESTART IDENTITY")
 
-            # longitude/latitude sont typees `point` : on encode le scalaire dans
-            # la coordonnee x via point(valeur, 0).
             psycopg2.extras.execute_values(
                 cur,
                 'INSERT INTO devices '
-                '(nom, address, longitude, latitude, "cityId") '
+                '(nom, address, typequ, categorie, dom, sdom, libcom, longitude, latitude, "cityId") '
                 "VALUES %s",
-                _device_rows(csv_files, epci_to_city, stats),
-                template="(%s, %s, point(%s, 0), point(%s, 0), %s)",
+                _device_rows(csv_files, code_to_city, epci_to_city, stats),
+                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 page_size=1000,
             )
         conn.commit()
         logger.info(
-            "[bpe] %s equipements inseres, %s ignores (sans coordonnees)",
+            "[bpe] %s lignes lues, %s equipements inseres, "
+            "%s ignores sans coordonnees, %s ignores sans commune, "
+            "%s rattaches par code commune, %s par EPCI",
+            stats["read"],
             stats["inserted"],
-            stats["skipped"],
+            stats["skipped_coords"],
+            stats["skipped_city"],
+            stats["city_by_code"],
+            stats["city_by_epci"],
         )
     except Exception:
         conn.rollback()

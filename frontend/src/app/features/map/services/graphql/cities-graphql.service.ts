@@ -55,7 +55,10 @@ const QUERY_CITIES_IN_BOUNDS = gql`
 @Injectable({ providedIn: 'root' })
 export class CitiesGraphqlService {
   readonly #apollo = inject(Apollo);
-  readonly #cache = new BoundsFeatureCache<CityFeature>();
+  readonly #cache = new BoundsFeatureCache<
+    GeoJSON.Polygon | GeoJSON.MultiPolygon,
+    CityFeature
+  >();
   #inFlight?: Promise<CitiesFeatureCollection>;
 
   async fetchFeatureCollection(viewport: MapBounds): Promise<CitiesFeatureCollection> {

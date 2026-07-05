@@ -7,17 +7,22 @@ import {
   unionMapBounds,
 } from './map-bounds.utils';
 
-type GeoJsonFeature = GeoJSON.Feature<
-  GeoJSON.Polygon | GeoJSON.MultiPolygon,
+type CacheableGeometry = GeoJSON.Point | GeoJSON.Polygon | GeoJSON.MultiPolygon;
+
+type GeoJsonFeature<TGeometry extends CacheableGeometry> = GeoJSON.Feature<
+  TGeometry,
   { id: number }
 >;
 
-type GeoJsonFeatureCollection<TProperties> = GeoJSON.FeatureCollection<
-  GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  TProperties
->;
+type GeoJsonFeatureCollection<
+  TGeometry extends CacheableGeometry,
+  TProperties,
+> = GeoJSON.FeatureCollection<TGeometry, TProperties>;
 
-export class BoundsFeatureCache<TFeature extends GeoJsonFeature> {
+export class BoundsFeatureCache<
+  TGeometry extends CacheableGeometry,
+  TFeature extends GeoJsonFeature<TGeometry>,
+> {
   readonly #featuresById = new Map<number, TFeature>();
   #loadedUnion?: MapBounds;
 
@@ -40,7 +45,7 @@ export class BoundsFeatureCache<TFeature extends GeoJsonFeature> {
   collectionForDisplay(
     viewport: MapBounds,
     paddingRatio: number,
-  ): GeoJsonFeatureCollection<TFeature['properties']> {
+  ): GeoJsonFeatureCollection<TGeometry, TFeature['properties']> {
     return this.collectionForBounds(
       buildFetchBounds(viewport, paddingRatio),
     );
@@ -48,7 +53,7 @@ export class BoundsFeatureCache<TFeature extends GeoJsonFeature> {
 
   collectionForBounds(
     bounds: MapBounds,
-  ): GeoJsonFeatureCollection<TFeature['properties']> {
+  ): GeoJsonFeatureCollection<TGeometry, TFeature['properties']> {
     const features: TFeature[] = [];
 
     for (const feature of this.#featuresById.values()) {

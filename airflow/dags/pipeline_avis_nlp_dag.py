@@ -27,8 +27,9 @@ with DAG(
     dag_id="pipeline_avis_nlp",
     description="Scrape avis bien-dans-ma-ville, sentiment NLP et wordclouds par commune",
     start_date=datetime(2026, 1, 1),
-    schedule="0 3 * * 0",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     default_args={
         "retries": 2,
         "retry_delay": timedelta(minutes=5),

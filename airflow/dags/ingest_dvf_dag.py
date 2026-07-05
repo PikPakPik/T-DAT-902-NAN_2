@@ -57,8 +57,9 @@ with DAG(
     dag_id="download_dvf",
     description="Telecharge et nettoie les fichiers DVF (geo-dvf) puis charge la table mutations via Spark",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     max_active_runs=1,
     default_args={
         "retries": 3,

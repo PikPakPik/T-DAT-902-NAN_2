@@ -88,8 +88,9 @@ with DAG(
     dag_id="download_contours_administratifs",
     description="Télécharge les contours administratifs GeoJSON et charge PostgreSQL",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     default_args={
         "retries":      3,
         "retry_delay":  timedelta(minutes=2),

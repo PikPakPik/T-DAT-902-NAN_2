@@ -40,6 +40,112 @@
   width: 100%;
 }
 
+.map-device-toggle {
+  position: absolute;
+  top: 10.9rem;
+  left: 0.625rem;
+  z-index: 4;
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.map-device-legend {
+  position: absolute;
+  left: 1rem;
+  bottom: 6.15rem;
+  z-index: 7;
+  width: min(220px, calc(100vw - 2rem));
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+  color: #111827;
+  pointer-events: none;
+}
+
+.map-device-legend__title {
+  margin-bottom: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.map-device-legend__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.6rem;
+}
+
+.map-device-legend__item {
+  display: grid;
+  grid-template-columns: 0.75rem 1fr;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.map-device-legend__swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1.5px solid #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+.map-device-toggle:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.map-device-toggle--active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.map-device-toggle__tooltip {
+  position: absolute;
+  left: calc(100% + 0.55rem);
+  top: 50%;
+  translate: 0 -50%;
+  padding: 0.28rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  transition:
+    opacity 0.12s ease,
+    translate 0.12s ease;
+}
+
+.map-device-toggle:hover .map-device-toggle__tooltip,
+.map-device-toggle:focus-visible .map-device-toggle__tooltip {
+  opacity: 1;
+  translate: 0.15rem -50%;
+}
+
 .graphql-indicator {
   position: absolute;
   bottom: 0.75rem;
@@ -131,6 +237,30 @@
   font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+:host ::ng-deep .device-popup {
+  display: grid;
+  gap: 0.18rem;
+  max-width: 230px;
+  color: #0f172a;
+}
+
+:host ::ng-deep .device-popup strong {
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+:host ::ng-deep .device-popup span {
+  color: #0f766e;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+:host ::ng-deep .device-popup small {
+  color: #475569;
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 :host ::ng-deep .mapboxgl-popup-anchor-top .mapboxgl-popup-tip,

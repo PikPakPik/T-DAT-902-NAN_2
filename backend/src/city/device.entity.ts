@@ -22,9 +22,24 @@ export class Device {
   @Column({ type: 'varchar', default: '' })
   address: string;
 
-  @Column({ type: 'point' })
+  @Column({ type: 'varchar', default: '' })
+  typequ: string;
+
+  @Column({ type: 'varchar', default: '' })
+  categorie: string;
+
+  @Column({ type: 'varchar', default: '' })
+  dom: string;
+
+  @Column({ type: 'varchar', default: '' })
+  sdom: string;
+
+  @Column({ type: 'varchar', default: '' })
+  libcom: string;
+
+  @Column({ type: 'double precision' })
   longitude: number;
 
-  @Column({ type: 'point' })
+  @Column({ type: 'double precision' })
   latitude: number;
 }

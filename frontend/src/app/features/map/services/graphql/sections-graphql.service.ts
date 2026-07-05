@@ -67,7 +67,10 @@ const QUERY_SECTIONS_BY_CITY = gql`
 @Injectable({ providedIn: 'root' })
 export class SectionsGraphqlService {
   readonly #apollo = inject(Apollo);
-  readonly #cache = new BoundsFeatureCache<SectionFeature>();
+  readonly #cache = new BoundsFeatureCache<
+    GeoJSON.Polygon | GeoJSON.MultiPolygon,
+    SectionFeature
+  >();
   #inFlight?: Promise<SectionsFeatureCollection>;
 
   async fetchFeatureCollection(

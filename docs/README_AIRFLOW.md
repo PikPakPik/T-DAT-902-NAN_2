@@ -24,6 +24,22 @@ Les dossiers montes dans les containers :
 - `./airflow/config` -> `/opt/airflow/config`
 - `./airflow/plugins` -> `/opt/airflow/plugins`
 
+## Déclenchement des DAGs
+
+Les DAGs métier Homepedia sont configurés en **manuel uniquement**
+(`schedule=None`) et avec `is_paused_upon_creation=True`.
+
+Objectif : démarrer Airflow ne doit jamais lancer automatiquement un
+téléchargement, un chargement distant ou le pipeline avis/NLP. Pour exécuter un
+DAG, il faut le déclencher explicitement depuis l'UI Airflow ou avec :
+
+```bash
+docker compose exec airflow-scheduler airflow dags trigger <dag_id>
+```
+
+Le pipeline `pipeline_avis_nlp` est concerné aussi, car il réécrit les avis dans
+MongoDB pendant le scraping.
+
 ## Connexions Airflow preconfigurees
 
 Au demarrage, Airflow cree automatiquement ces connexions via des variables
@@ -47,7 +63,7 @@ docker compose exec airflow-scheduler airflow connections get mongo_default
 
 ## DAG cadastre
 
-Fichier : `airflow/dags/download_cadastre_dag.py`
+Fichier : `airflow/dags/ingest_cadastre_dag.py`
 
 DAG `download_cadastre` (après `download_contours_administratifs`) :
 
@@ -117,4 +133,3 @@ docker compose restart airflow-dag-processor
 - **Erreur env manquante** (`KeyError`) : ajouter la variable dans `.env` ou dans les `environment` Airflow du compose.
 - **Ancien service webserver qui plante** : supprimer les orphelins
   - `docker compose up -d --remove-orphans`
-

@@ -38,6 +38,10 @@ import {
   type CityRentGql,
 } from './services/graphql/city-rent-graphql.service';
 import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
+import {
+  DevicesGraphqlService,
+  type DeviceGql,
+} from './services/graphql/devices-graphql.service';
 import { MapGraphqlSmokeService } from './services/graphql/map-graphql-smoke.service';
 import { PlotsGraphqlService, type PlotDetailsGql } from './services/graphql/plots-graphql.service';
 import { PriceLegendGraphqlService } from './services/graphql/price-legend-graphql.service';
@@ -76,6 +80,15 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly densityLegend = DENSITY_LEGEND;
   readonly criminalityLegend = CRIMINALITY_LEGEND;
   readonly rentLegend = RENT_LEGEND;
+  readonly deviceLegend = [
+    { label: 'Services', color: '#2563eb' },
+    { label: 'Commerces', color: '#dc2626' },
+    { label: 'Éducation', color: '#7c3aed' },
+    { label: 'Santé', color: '#16a34a' },
+    { label: 'Transports', color: '#0891b2' },
+    { label: 'Sports', color: '#ea580c' },
+    { label: 'Culture', color: '#be185d' },
+  ];
   readonly legendScope = signal('France');
   readonly mapLegendVisible = signal(true);
   readonly priceLegendLabels = signal<PriceLegendLabels>({
@@ -103,6 +116,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly selectedPlot = signal<PlotDetailsGql | null>(null);
   readonly plotLoading = signal(false);
   readonly plotError = signal<string | null>(null);
+  readonly devicesVisible = signal(false);
+  readonly plotDevices = signal<DeviceGql[]>([]);
+  readonly plotDevicesLoading = signal(false);
 
   mapElement = viewChild<ElementRef<HTMLDivElement>>('map');
 
@@ -113,6 +129,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   #graphqlSmoke = inject(MapGraphqlSmokeService);
   #regionsGraphql = inject(RegionsGraphqlService);
   #departmentsGraphql = inject(DepartmentsGraphqlService);
+  #devicesGraphql = inject(DevicesGraphqlService);
   #citiesGraphql = inject(CitiesGraphqlService);
   #sectionsGraphql = inject(SectionsGraphqlService);
   #plotsGraphql = inject(PlotsGraphqlService);
@@ -149,6 +166,12 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   onFilterChanged(filterId: MapFilterId): void {
     this.activeFilter.set(filterId);
     this.#mapFacade?.setChoropleth(filterId);
+  }
+
+  toggleDevices(): void {
+    const visible = !this.devicesVisible();
+    this.devicesVisible.set(visible);
+    this.#mapFacade?.setDevicesVisible(visible);
   }
 
   async updatePriceLegend(scope: PriceLegendScope): Promise<void> {
@@ -236,19 +259,25 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.panelVisible.set(true);
     this.panelMode.set('plot');
     this.selectedPlot.set(null);
+    this.plotDevices.set([]);
     this.plotError.set(null);
     this.plotLoading.set(true);
+    this.plotDevicesLoading.set(true);
 
     const seq = ++this.#plotRequestSeq;
 
     try {
-      const plot = await this.#plotsGraphql.fetchDetails(plotId);
+      const [plot, devices] = await Promise.all([
+        this.#plotsGraphql.fetchDetails(plotId),
+        this.#devicesGraphql.fetchNearPlot(plotId, 500, 30),
+      ]);
       if (seq !== this.#plotRequestSeq) return;
       if (!plot) {
         this.plotError.set('Parcelle introuvable.');
         return;
       }
       this.selectedPlot.set(plot);
+      this.plotDevices.set(devices);
     } catch (error) {
       if (seq !== this.#plotRequestSeq) return;
       const message =
@@ -257,6 +286,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     } finally {
       if (seq === this.#plotRequestSeq) {
         this.plotLoading.set(false);
+        this.plotDevicesLoading.set(false);
       }
     }
   }
@@ -299,6 +329,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       (bounds) => this.#citiesGraphql.fetchFeatureCollection(bounds),
       (bounds) => this.#sectionsGraphql.fetchFeatureCollection(bounds),
       (bounds) => this.#plotsGraphql.fetchFeatureCollection(bounds),
+      (bounds) => this.#devicesGraphql.fetchFeatureCollection(bounds),
       (city) => {
         this.#ngZone.run(() => {
           void this.#handleCitySelect(city);

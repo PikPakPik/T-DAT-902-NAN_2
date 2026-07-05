@@ -42,7 +42,10 @@ const QUERY_DEPARTMENTS_IN_BOUNDS = gql`
 @Injectable({ providedIn: 'root' })
 export class DepartmentsGraphqlService {
   readonly #apollo = inject(Apollo);
-  readonly #cache = new BoundsFeatureCache<DepartmentFeature>();
+  readonly #cache = new BoundsFeatureCache<
+    GeoJSON.Polygon | GeoJSON.MultiPolygon,
+    DepartmentFeature
+  >();
   #inFlight?: Promise<DepartmentsFeatureCollection>;
 
   async fetchFeatureCollection(

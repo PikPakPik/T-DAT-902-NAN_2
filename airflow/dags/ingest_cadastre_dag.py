@@ -79,8 +79,9 @@ with DAG(
     dag_id="download_cadastre",
     description="Télécharge le cadastre Etalab et charge sections + parcelles dans PostgreSQL",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     max_active_tasks=8,
     default_args={
         "retries": 2,

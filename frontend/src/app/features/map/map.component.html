@@ -25,6 +25,18 @@
   } @else {
     <div #map class="map"></div>
     <map-filter-panel (filterChanged)="onFilterChanged($event)" />
+    <button
+      type="button"
+      class="map-device-toggle"
+      [class.map-device-toggle--active]="devicesVisible()"
+      [attr.aria-pressed]="devicesVisible()"
+      aria-label="Afficher les équipements"
+      title="Afficher les équipements"
+      (click)="toggleDevices()"
+    >
+      <i class="pi pi-building" aria-hidden="true"></i>
+      <span class="map-device-toggle__tooltip">Équipements</span>
+    </button>
     <map-legend
       [visible]="activeFilter() === 'prix_m2' && mapLegendVisible()"
       [title]="priceLegend.title"
@@ -50,6 +62,22 @@
       scope="Appartement"
       [entries]="rentLegend"
     />
+    @if (devicesVisible()) {
+      <div class="map-device-legend" aria-label="Légende des équipements">
+        <div class="map-device-legend__title">Équipements</div>
+        <div class="map-device-legend__grid">
+          @for (entry of deviceLegend; track entry.label) {
+            <div class="map-device-legend__item">
+              <span
+                class="map-device-legend__swatch"
+                [style.background]="entry.color"
+              ></span>
+              <span>{{ entry.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
   }
 
   <city-detail-panel
@@ -72,6 +100,8 @@
     [loading]="plotLoading()"
     [error]="plotError()"
     [plot]="selectedPlot()"
+    [devices]="plotDevices()"
+    [devicesLoading]="plotDevicesLoading()"
     (closed)="onPanelClosed()"
   />
 </div>

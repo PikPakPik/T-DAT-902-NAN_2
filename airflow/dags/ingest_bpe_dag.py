@@ -101,8 +101,9 @@ with DAG(
     dag_id="download_bpe_equipements",
     description="Telecharge la Base permanente des equipements (equipements geolocalises 2024) au format CSV depuis insee.fr",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     max_active_runs=1,
     default_args={
         "retries": 3,

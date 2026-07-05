@@ -162,7 +162,10 @@ const QUERY_PLOT_DETAILS = gql`
 @Injectable({ providedIn: 'root' })
 export class PlotsGraphqlService {
   readonly #apollo = inject(Apollo);
-  readonly #cache = new BoundsFeatureCache<PlotFeature>();
+  readonly #cache = new BoundsFeatureCache<
+    GeoJSON.Polygon | GeoJSON.MultiPolygon,
+    PlotFeature
+  >();
   #inFlight?: Promise<PlotsFeatureCollection>;
 
   async fetchFeatureCollection(

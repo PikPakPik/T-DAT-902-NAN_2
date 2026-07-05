@@ -73,8 +73,14 @@ export function bboxesIntersect(bbox: GeoBbox, viewport: MapBounds): boolean {
 }
 
 export function geometryBbox(
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
+  geometry: GeoJSON.Point | GeoJSON.Polygon | GeoJSON.MultiPolygon,
 ): GeoBbox | null {
+  if (geometry.type === 'Point') {
+    const [lng, lat] = geometry.coordinates;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+    return { west: lng, south: lat, east: lng, north: lat };
+  }
+
   let west = Infinity;
   let south = Infinity;
   let east = -Infinity;

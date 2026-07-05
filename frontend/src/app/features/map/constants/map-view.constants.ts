@@ -10,5 +10,8 @@ export const MAP_CITIES_MIN_ZOOM = 9;
 /** Zoom minimum pour afficher les sections cadastrales. */
 export const MAP_SECTIONS_MIN_ZOOM = 12;
 
+/** Zoom minimum pour charger les equipements BPE. */
+export const MAP_DEVICES_MIN_ZOOM = 13.5;
+
 /** Zoom minimum pour afficher les parcelles. */
 export const MAP_PLOTS_MIN_ZOOM = 15;

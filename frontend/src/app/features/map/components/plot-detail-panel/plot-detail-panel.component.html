@@ -44,6 +44,38 @@
         </section>
 
         <div class="plot-detail-panel__section-title">
+          <h3>Équipements proches</h3>
+          <span>{{ devicesCount() }}</span>
+        </div>
+
+        @if (devicesLoading()) {
+          <div class="plot-detail-panel__state plot-detail-panel__state--compact">
+            <p>Chargement des équipements proches…</p>
+          </div>
+        } @else if (devices().length) {
+          <div class="device-list">
+            @for (device of devices(); track device.id) {
+              <article class="device-card">
+                <div [class]="'device-card__family ' + deviceFamilyModifier(device)">
+                  <i [class]="deviceIconClass(device)" aria-hidden="true"></i>
+                  <span>{{ device.familyLabel }}</span>
+                </div>
+                <div class="device-card__main">
+                  <h4>{{ device.nom }}</h4>
+                  <p>{{ deviceTypeLabel(device) }}</p>
+                  <small>{{ deviceAddressLabel(device) }}</small>
+                </div>
+                <strong>{{ deviceDistanceLabel(device) }}</strong>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="plot-detail-panel__state plot-detail-panel__state--compact">
+            <p>Aucun équipement BPE à moins de 500 m.</p>
+          </div>
+        }
+
+        <div class="plot-detail-panel__section-title">
           <h3>DPE</h3>
           <span>{{ dpesCount() }}</span>
         </div>

@@ -127,8 +127,9 @@ with DAG(
     dag_id="download_recensement_populations_legales",
     description="Telecharge les populations legales du recensement (tous niveaux geographiques) au format CSV depuis insee.fr",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     default_args={
         "retries": 3,
         "retry_delay": timedelta(minutes=2),

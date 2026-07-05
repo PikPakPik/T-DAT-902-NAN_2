@@ -87,8 +87,9 @@ with DAG(
     dag_id="download_delinquance_communale",
     description="Telecharge et transforme la base statistique communale de la delinquance (SSMSI) depuis data.gouv.fr",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     default_args={
         "retries": 3,
         "retry_delay": timedelta(minutes=2),

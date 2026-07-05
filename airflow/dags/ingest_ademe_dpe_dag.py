@@ -256,8 +256,9 @@ with DAG(
     dag_id="download_ademe_dpe",
     description="Telecharge les DPE ADEME (logements existants, tertiaire) au format CSV depuis data.ademe.fr",
     start_date=datetime(2026, 1, 1),
-    schedule="@monthly",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     max_active_runs=1,
     params={"max_rows": Param(0, type="integer", description="Limite de lignes par dataset (0 = illimite, pour tests)")},
     default_args={

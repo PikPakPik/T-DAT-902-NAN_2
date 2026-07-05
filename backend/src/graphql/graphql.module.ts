@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CityInsightsModule } from '../city-insights/city-insights.module';
 import { CityModule } from '../city/city.module';
 import { DepartmentModule } from '../department/department.module';
+import { DeviceModule } from '../device/device.module';
 import { DpeModule } from '../dpe/dpe.module';
 import { PlotModule } from '../plot/plot.module';
 import { PriceLegendModule } from '../price-legend/price-legend.module';
@@ -15,6 +16,7 @@ import { GraphqlTestResolver } from './graphql-test.resolver';
     DepartmentModule,
     CityModule,
     CityInsightsModule,
+    DeviceModule,
     PriceLegendModule,
     SectionModule,
     PlotModule,

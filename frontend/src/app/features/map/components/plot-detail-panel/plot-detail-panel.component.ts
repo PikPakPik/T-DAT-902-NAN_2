@@ -7,6 +7,9 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type {
+  DeviceGql,
+} from '../../services/graphql/devices-graphql.service';
+import type {
   PlotDpeGql,
   PlotDetailsGql,
   PlotSaleGql,
@@ -26,11 +29,14 @@ export class PlotDetailPanelComponent {
   readonly loading = input(false);
   readonly error = input<string | null>(null);
   readonly plot = input<PlotDetailsGql | null>(null);
+  readonly devices = input<DeviceGql[]>([]);
+  readonly devicesLoading = input(false);
 
   readonly closed = output<void>();
 
   readonly salesCount = computed(() => this.plot()?.sales.length ?? 0);
   readonly dpesCount = computed(() => this.plot()?.dpes.length ?? 0);
+  readonly devicesCount = computed(() => this.devices().length);
 
   formatCurrency(value: number | null | undefined): string {
     if (value == null || !Number.isFinite(value)) return '-';
@@ -90,6 +96,44 @@ export class PlotDetailPanelComponent {
     const year = dpe.anneeConstruction;
     if (!Number.isFinite(year) || year <= 0) return '-';
     return String(year);
+  }
+
+  deviceDistanceLabel(device: DeviceGql): string {
+    const distance = device.distanceMeters;
+    if (distance == null || !Number.isFinite(distance)) return '-';
+    if (distance >= 1000) {
+      return `${(distance / 1000).toLocaleString('fr-FR', {
+        maximumFractionDigits: 1,
+      })} km`;
+    }
+    return `${Math.round(distance).toLocaleString('fr-FR')} m`;
+  }
+
+  deviceTypeLabel(device: DeviceGql): string {
+    return device.categorie || device.typequ || device.familyLabel;
+  }
+
+  deviceAddressLabel(device: DeviceGql): string {
+    return device.address || device.libcom || '-';
+  }
+
+  deviceFamilyModifier(device: DeviceGql): string {
+    const family = device.family || 'other';
+    return `device-card__family--${family}`;
+  }
+
+  deviceIconClass(device: DeviceGql): string {
+    const icons: Record<string, string> = {
+      services: 'pi pi-building',
+      commerce: 'pi pi-shopping-cart',
+      education: 'pi pi-book',
+      health: 'pi pi-heart',
+      transport: 'pi pi-car',
+      sport: 'pi pi-trophy',
+      culture: 'pi pi-image',
+      other: 'pi pi-map-marker',
+    };
+    return icons[device.family || 'other'] ?? icons['other'];
   }
 
   close(): void {

@@ -177,6 +177,116 @@
   margin-bottom: 1rem;
 }
 
+.device-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.device-card {
+  display: grid;
+  grid-template-columns: minmax(0, 5.75rem) minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+
+  strong {
+    color: #0f766e;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+}
+
+.device-card__family {
+  min-width: 0;
+  padding: 0.25rem 0.35rem;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+
+  i {
+    font-size: 0.95rem;
+  }
+
+  span {
+    overflow-wrap: anywhere;
+  }
+}
+
+.device-card__family--services {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.device-card__family--commerce {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.device-card__family--education {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.device-card__family--health {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.device-card__family--transport {
+  background: #cffafe;
+  color: #0e7490;
+}
+
+.device-card__family--sport {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.device-card__family--culture {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.device-card__main {
+  min-width: 0;
+
+  h4 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 0.2rem 0 0;
+    color: #475569;
+    font-size: 0.74rem;
+    font-weight: 750;
+    line-height: 1.25;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.15rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    line-height: 1.25;
+  }
+}
+
 .dpe-card {
   display: grid;
   gap: 0.55rem;

@@ -46,8 +46,9 @@ with DAG(
     dag_id="download_rnic",
     description="Telecharge l'actualisation quotidienne du registre national des coproprietes (RNIC) depuis data.gouv.fr",
     start_date=datetime(2026, 1, 1),
-    schedule="@daily",
+    schedule=None,
     catchup=False,
+    is_paused_upon_creation=True,
     default_args={
         "retries": 3,
         "retry_delay": timedelta(minutes=2),
