@@ -16,6 +16,7 @@ export interface DeviceGql {
   libcom: string;
   family: string;
   familyLabel: string;
+  typeLabel: string;
   longitude: number;
   latitude: number;
   cityId: number;
@@ -43,6 +44,7 @@ export type DeviceFeature = GeoJSON.Feature<
     libcom: string;
     family: string;
     familyLabel: string;
+    typeLabel: string;
     distanceMeters: number | null;
   }
 >;
@@ -65,6 +67,7 @@ const QUERY_DEVICES_IN_BOUNDS = gql`
       libcom
       family
       familyLabel
+      typeLabel
       longitude
       latitude
       cityId
@@ -89,6 +92,7 @@ const QUERY_DEVICES_NEAR_PLOT = gql`
       libcom
       family
       familyLabel
+      typeLabel
       longitude
       latitude
       cityId
@@ -189,6 +193,7 @@ export class DevicesGraphqlService {
         libcom: device.libcom,
         family: device.family,
         familyLabel: device.familyLabel,
+        typeLabel: device.typeLabel,
         distanceMeters: device.distanceMeters,
       },
       geometry: {

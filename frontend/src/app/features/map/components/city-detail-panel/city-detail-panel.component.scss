@@ -556,3 +556,26 @@
     height: 180px;
   }
 }
+
+.air__value {
+  color: #0f766e;
+}
+
+.air__days-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.air__day--good {
+  background: #ecfdf5;
+  border-color: #86efac;
+}
+
+.air__day--medium {
+  background: #fefce8;
+  border-color: #fde047;
+}
+
+.air__day--bad {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}

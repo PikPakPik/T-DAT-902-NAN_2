@@ -110,7 +110,7 @@ export class PlotDetailPanelComponent {
   }
 
   deviceTypeLabel(device: DeviceGql): string {
-    return device.categorie || device.typequ || device.familyLabel;
+    return device.typeLabel;
   }
 
   deviceAddressLabel(device: DeviceGql): string {

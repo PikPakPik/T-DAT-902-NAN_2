@@ -15,10 +15,12 @@ import type { CityCrimeGql } from '../../services/graphql/city-crime-graphql.ser
 import type { CityInsightsGql } from '../../services/graphql/city-insights-graphql.service';
 import type { CityPopulationGql } from '../../services/graphql/city-population-graphql.service';
 import type { CityRentGql } from '../../services/graphql/city-rent-graphql.service';
+import type { CityAirQualityGql } from '../../services/graphql/city-air-quality-graphql.service';
 import type { SelectedCity } from '../../models/selected-city.model';
+import { formatAirQuality } from '../../overlays/shared/air-quality-colors';
 
 type SentimentSeverity = 'success' | 'warn' | 'danger' | 'secondary';
-type ActiveTab = 'avis' | 'demographie' | 'criminalite' | 'loyers';
+type ActiveTab = 'avis' | 'demographie' | 'criminalite' | 'loyers' | 'air';
 
 /** ~4 lignes de texte avant affichage du bouton « Afficher plus » */
 const REVIEW_COMMENT_COLLAPSE_THRESHOLD = 180;
@@ -43,13 +45,15 @@ export class CityDetailPanelComponent {
   readonly crimeHistory = input<CityCrimeGql[]>([]);
   readonly rent = input<CityRentGql | null>(null);
   readonly rentHistory = input<CityRentGql[]>([]);
+  readonly airQuality = input<CityAirQualityGql | null>(null);
+  readonly airQualityHistory = input<CityAirQualityGql[]>([]);
 
   readonly closed = output<void>();
 
   readonly #activeTab = signal<ActiveTab>('avis');
   readonly activeTab = this.#activeTab.asReadonly();
 
-  readonly #wordcloudVisible = signal(false);
+  readonly #wordcloudVisible = signal(true);
   readonly wordcloudVisible = this.#wordcloudVisible.asReadonly();
 
   readonly #expandedReviewKeys = signal<ReadonlySet<string>>(new Set());
@@ -62,7 +66,7 @@ export class CityDetailPanelComponent {
     effect(() => {
       this.#panelResetKey();
       this.#activeTab.set('avis');
-      this.#wordcloudVisible.set(false);
+      this.#wordcloudVisible.set(true);
       this.#expandedReviewKeys.set(new Set());
     });
   }
@@ -107,6 +111,17 @@ export class CityDetailPanelComponent {
   formatObservations(value: number | null | undefined): string {
     if (value == null) return '-';
     return new Intl.NumberFormat('fr-FR').format(value);
+  }
+
+  formatAirQuality(value: number | null | undefined): string {
+    return formatAirQuality(value);
+  }
+
+  formatAirIndex(value: number | null | undefined): string {
+    if (value == null) return '-';
+    return new Intl.NumberFormat('fr-FR', {
+      maximumFractionDigits: 1,
+    }).format(value);
   }
 
   readonly crimeItems = computed(() => {
@@ -273,6 +288,103 @@ export class CityDetailPanelComponent {
             new Intl.NumberFormat('fr-FR', {
               maximumFractionDigits: 0,
             }).format(value),
+        },
+      },
+    },
+  };
+
+  readonly airQualityItems = computed(() => {
+    const air = this.airQuality();
+    if (!air) return [];
+
+    return [
+      { label: 'PM2.5', value: air.pm25Median },
+      { label: 'PM10', value: air.pm10Median },
+      { label: 'NO2', value: air.no2Median },
+      { label: 'O3', value: air.o3Median },
+    ];
+  });
+
+  readonly airQualityDayItems = computed(() => {
+    const air = this.airQuality();
+    if (!air) return [];
+
+    return [
+      { label: 'Bon', value: air.nbJoursBon, className: 'air__day--good' },
+      {
+        label: 'Moyen / dégradé',
+        value: air.nbJoursMoyen,
+        className: 'air__day--medium',
+      },
+      { label: 'Mauvais +', value: air.nbJoursMauvais, className: 'air__day--bad' },
+    ];
+  });
+
+  readonly airQualityChartData = computed(() => {
+    const history = this.airQualityHistory();
+    if (!history.length) return null;
+
+    return {
+      labels: history.map((h) => String(h.annee)),
+      datasets: [
+        {
+          label: 'Indice ATMO médian',
+          data: history.map((h) => h.indiceAtmoMedian),
+          evolutionPct: history.map((h) => h.evolutionPct ?? null),
+          details: history,
+          backgroundColor: 'rgba(80, 204, 170, 0.16)',
+          borderColor: '#0f766e',
+          borderWidth: 2,
+          pointBackgroundColor: '#0f766e',
+          pointRadius: 4,
+          fill: true,
+          tension: 0.3,
+        },
+      ],
+    };
+  });
+
+  readonly airQualityChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: {
+            raw: number;
+            dataset: {
+              evolutionPct: (number | null)[];
+              details: CityAirQualityGql[];
+            };
+            dataIndex: number;
+          }) => {
+            const lines = [this.formatAirQuality(ctx.raw)];
+            const evo = ctx.dataset.evolutionPct?.[ctx.dataIndex];
+            const details = ctx.dataset.details?.[ctx.dataIndex];
+
+            if (evo != null) {
+              lines.push(`${this.formatEvolution(evo)} vs année précédente`);
+            }
+
+            if (details) {
+              lines.push(`Bon ${details.nbJoursBon} j`);
+              lines.push(`Moyen / dégradé ${details.nbJoursMoyen} j`);
+              lines.push(`Mauvais + ${details.nbJoursMauvais} j`);
+            }
+
+            return lines;
+          },
+        },
+      },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        suggestedMin: 1,
+        suggestedMax: 6,
+        ticks: {
+          stepSize: 1,
         },
       },
     },

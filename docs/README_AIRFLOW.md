@@ -40,6 +40,28 @@ docker compose exec airflow-scheduler airflow dags trigger <dag_id>
 Le pipeline `pipeline_avis_nlp` est concerné aussi, car il réécrit les avis dans
 MongoDB pendant le scraping.
 
+## DAG qualité de l'air
+
+Fichier : `airflow/dags/ingest_air_quality_dag.py`
+
+DAG `download_air_quality` :
+
+1. Authentification JWT sur l'API Atmo Data (`/api/login`)
+2. Téléchargement des indices ATMO communaux en CSV (`/api/v2/data/indices/atmo`)
+3. Agrégation commune/année dans `air_quality`
+
+Variables requises dans `.env` :
+
+- `ATMO_USERNAME`
+- `ATMO_PASSWORD`
+- `ATMO_AASQA_CODES` (optionnel, tous les codes par défaut)
+- `ATMO_WINDOW_DAYS` (optionnel, `31` par défaut pour éviter les timeouts API)
+
+Les paramètres de lancement permettent de choisir `start_date`, `end_date` et
+`aasqa_codes`. Les colonnes `pm25_median`, `pm10_median`, `no2_median` et
+`o3_median` stockent les médianes des sous-indices ATMO par polluant, pas des
+concentrations en µg/m³.
+
 ## Connexions Airflow preconfigurees
 
 Au demarrage, Airflow cree automatiquement ces connexions via des variables
@@ -89,16 +111,6 @@ Si une tâche échoue avec **OOM (signal -9)** : c'est désormais rare côté wo
 **Durée chargement** : ~1–5 min / petit département, ~10–30 min pour les gros (14, 75, 13…). France entière (~109 dept) : **plusieurs heures**.
 
 Les parcelles ne sont pas publiées au format « France entière » : l’ingestion passe par un fichier par département. Le téléchargement complet peut prendre **plusieurs heures** : ce n’est pas un blocage si les logs affichent `Downloading …` ou `Already present`.
-
-## DAG exemple inclus
-
-Fichier : `airflow/dags/homepedia_stack_smoke_dag.py`
-
-DAG `homepedia_stack_smoke` :
-
-- check `BACKEND_HEALTH_URL`
-- check TCP vers PostGIS
-- check TCP vers MongoDB
 
 ## Commandes utiles
 

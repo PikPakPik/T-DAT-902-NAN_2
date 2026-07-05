@@ -21,10 +21,10 @@ interface DeviceRow {
 }
 
 const FAMILY_BY_DOM: Record<string, { family: string; label: string }> = {
-  A: { family: 'services', label: 'Services publics' },
+  A: { family: 'services', label: 'Services' },
   B: { family: 'commerce', label: 'Commerces' },
   C: { family: 'education', label: 'Enseignement' },
-  D: { family: 'health', label: 'Sante' },
+  D: { family: 'health', label: 'Santé' },
   E: { family: 'transport', label: 'Transports' },
   F: { family: 'sport', label: 'Sports et loisirs' },
   G: { family: 'culture', label: 'Culture' },
@@ -138,23 +138,51 @@ export class DeviceService {
       family: 'other',
       label: 'Equipements',
     };
+    const typequ = row.typequ ?? '';
+    const categorie = row.categorie ?? '';
+    const sdom = row.sdom ?? '';
 
     return {
       id: row.id,
       nom: row.nom,
       address: row.address ?? '',
-      typequ: row.typequ ?? '',
-      categorie: row.categorie ?? '',
+      typequ,
+      categorie,
       dom,
-      sdom: row.sdom ?? '',
+      sdom,
       libcom: row.libcom ?? '',
       family: family.family,
       familyLabel: family.label,
+      typeLabel: this.displayTypeLabel(categorie, typequ, sdom),
       longitude: Number(row.longitude),
       latitude: Number(row.latitude),
       cityId: row.cityId,
       distanceMeters:
         row.distanceMeters != null ? Number(row.distanceMeters) : null,
     };
+  }
+
+  private displayTypeLabel(
+    categorie: string,
+    typequ: string,
+    sdom: string,
+  ): string {
+    for (const value of [categorie, typequ, sdom]) {
+      const cleaned = value.trim();
+      if (cleaned && !this.isTechnicalBpeCode(cleaned)) {
+        return cleaned;
+      }
+    }
+    return '';
+  }
+
+  private isTechnicalBpeCode(value: string): boolean {
+    const normalized = value.trim().toUpperCase();
+    return (
+      normalized.startsWith('_') ||
+      /^[A-G]$/.test(normalized) ||
+      /^[A-Z][0-9]{1,3}$/.test(normalized) ||
+      /^[A-Z]{1,3}[0-9]{1,3}$/.test(normalized)
+    );
   }
 }

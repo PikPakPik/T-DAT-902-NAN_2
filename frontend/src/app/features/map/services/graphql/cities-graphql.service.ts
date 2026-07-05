@@ -14,6 +14,7 @@ export interface CityGql {
   densite: number | null;
   criminaliteScore: number | null;
   loyerMedianApt: number | null;
+  indiceAtmoMedian: number | null;
 }
 
 interface CitiesInBoundsQueryResponse {
@@ -28,6 +29,7 @@ export interface CityProperties {
   densite: number | null;
   criminaliteScore: number | null;
   loyerMedianApt: number | null;
+  indiceAtmoMedian: number | null;
 }
 
 export type CityFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, CityProperties>;
@@ -48,6 +50,7 @@ const QUERY_CITIES_IN_BOUNDS = gql`
       densite
       criminaliteScore
       loyerMedianApt
+      indiceAtmoMedian
     }
   }
 `;
@@ -117,6 +120,7 @@ export class CitiesGraphqlService {
         densite: city.densite,
         criminaliteScore: city.criminaliteScore,
         loyerMedianApt: city.loyerMedianApt,
+        indiceAtmoMedian: city.indiceAtmoMedian,
       },
       geometry: JSON.parse(city.geometry) as GeoJSON.Polygon | GeoJSON.MultiPolygon,
     };

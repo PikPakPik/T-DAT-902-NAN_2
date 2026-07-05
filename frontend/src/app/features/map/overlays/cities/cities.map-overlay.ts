@@ -7,6 +7,10 @@ import { adminFillColorExpression, formatPriceM2 } from '../shared/price-colors'
 import { densityFillColorExpression } from '../shared/density-colors';
 import { criminalityFillColorExpression } from '../shared/criminality-colors';
 import { rentFillColorExpression } from '../shared/rent-colors';
+import {
+  airQualityFillColorExpression,
+  formatAirQuality,
+} from '../shared/air-quality-colors';
 import type { MapFilterId } from '../../models/map-filter.model';
 
 const CITIES_SOURCE_ID = 'cities-fr';
@@ -75,6 +79,8 @@ export class CitiesMapOverlay implements MapboxOverlay {
           ? criminalityFillColorExpression()
           : key === 'loyer'
             ? rentFillColorExpression()
+            : key === 'qualite_air'
+              ? airQualityFillColorExpression()
             : adminFillColorExpression();
 
     map.setPaintProperty(CITIES_FILL_LAYER_ID, 'fill-color', expression);
@@ -352,6 +358,10 @@ export class CitiesMapOverlay implements MapboxOverlay {
 
     if (this.#activeChoropleth === 'loyer') {
       return this.#formatRent(this.#numberProperty(feature, 'loyerMedianApt'));
+    }
+
+    if (this.#activeChoropleth === 'qualite_air') {
+      return formatAirQuality(this.#numberProperty(feature, 'indiceAtmoMedian'));
     }
 
     return formatPriceM2(this.#numberProperty(feature, 'prixMedianM2'));

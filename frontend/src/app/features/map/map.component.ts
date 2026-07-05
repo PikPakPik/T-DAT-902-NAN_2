@@ -18,6 +18,7 @@ import { PRICE_LEGEND } from './overlays/shared/price-colors';
 import { DENSITY_LEGEND } from './overlays/shared/density-colors';
 import { CRIMINALITY_LEGEND } from './overlays/shared/criminality-colors';
 import { RENT_LEGEND } from './overlays/shared/rent-colors';
+import { AIR_QUALITY_LEGEND } from './overlays/shared/air-quality-colors';
 import { MapboxMapFacade, type PriceLegendScope } from './core/mapbox-map.facade';
 import type { SelectedCity } from './models/selected-city.model';
 import { CitiesGraphqlService } from './services/graphql/cities-graphql.service';
@@ -37,6 +38,10 @@ import {
   CityRentGraphqlService,
   type CityRentGql,
 } from './services/graphql/city-rent-graphql.service';
+import {
+  CityAirQualityGraphqlService,
+  type CityAirQualityGql,
+} from './services/graphql/city-air-quality-graphql.service';
 import { DepartmentsGraphqlService } from './services/graphql/departments-graphql.service';
 import {
   DevicesGraphqlService,
@@ -80,6 +85,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly densityLegend = DENSITY_LEGEND;
   readonly criminalityLegend = CRIMINALITY_LEGEND;
   readonly rentLegend = RENT_LEGEND;
+  readonly airQualityLegend = AIR_QUALITY_LEGEND;
   readonly deviceLegend = [
     { label: 'Services', color: '#2563eb' },
     { label: 'Commerces', color: '#dc2626' },
@@ -111,6 +117,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly cityCrimeHistory = signal<CityCrimeGql[]>([]);
   readonly cityRent = signal<CityRentGql | null>(null);
   readonly cityRentHistory = signal<CityRentGql[]>([]);
+  readonly cityAirQuality = signal<CityAirQualityGql | null>(null);
+  readonly cityAirQualityHistory = signal<CityAirQualityGql[]>([]);
   readonly insightsLoading = signal(false);
   readonly insightsError = signal<string | null>(null);
   readonly selectedPlot = signal<PlotDetailsGql | null>(null);
@@ -138,6 +146,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   #cityInsightsGraphql = inject(CityInsightsGraphqlService);
   #cityPopulationGraphql = inject(CityPopulationGraphqlService);
   #cityRentGraphql = inject(CityRentGraphqlService);
+  #cityAirQualityGraphql = inject(CityAirQualityGraphqlService);
   #ngZone = inject(NgZone);
 
   ngAfterViewInit(): void {
@@ -219,13 +228,25 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.cityCrimeHistory.set([]);
     this.cityRent.set(null);
     this.cityRentHistory.set([]);
+    this.cityAirQuality.set(null);
+    this.cityAirQualityHistory.set([]);
     this.insightsError.set(null);
     this.insightsLoading.set(true);
 
     const seq = ++this.#insightsRequestSeq;
 
     try {
-      const [insights, population, history, crime, crimeHistory, rent, rentHistory] =
+      const [
+        insights,
+        population,
+        history,
+        crime,
+        crimeHistory,
+        rent,
+        rentHistory,
+        airQuality,
+        airQualityHistory,
+      ] =
         await Promise.all([
           this.#cityInsightsGraphql.fetchByCode(city.code),
           this.#cityPopulationGraphql.fetchByCode(city.code),
@@ -234,6 +255,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
           this.#cityCrimeGraphql.fetchHistoryByCode(city.code),
           this.#cityRentGraphql.fetchByCode(city.code),
           this.#cityRentGraphql.fetchHistoryByCode(city.code),
+          this.#cityAirQualityGraphql.fetchByCode(city.code),
+          this.#cityAirQualityGraphql.fetchHistoryByCode(city.code),
         ]);
       if (seq !== this.#insightsRequestSeq) return;
       this.cityInsights.set(insights);
@@ -243,6 +266,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       this.cityCrimeHistory.set(crimeHistory);
       this.cityRent.set(rent);
       this.cityRentHistory.set(rentHistory);
+      this.cityAirQuality.set(airQuality);
+      this.cityAirQualityHistory.set(airQualityHistory);
     } catch (error) {
       if (seq !== this.#insightsRequestSeq) return;
       const message =

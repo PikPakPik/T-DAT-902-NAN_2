@@ -62,6 +62,14 @@
       >
         Loyers
       </button>
+      <button
+        type="button"
+        class="city-detail-panel__tab"
+        [class.city-detail-panel__tab--active]="activeTab() === 'air'"
+        (click)="setTab('air')"
+      >
+        Air
+      </button>
     </nav>
 
     <div class="city-detail-panel__body">
@@ -292,6 +300,58 @@
         } @else {
           <div class="city-detail-panel__state">
             <p>Données de loyers non disponibles pour cette commune.</p>
+          </div>
+        }
+      } @else if (activeTab() === 'air') {
+        @if (loading()) {
+          <div class="city-detail-panel__state">
+            <div class="city-detail-panel__spinner"></div>
+            <p>Chargement de la qualité de l'air…</p>
+          </div>
+        } @else if (airQuality(); as airStats) {
+          <section class="loyers air" aria-label="Données qualité de l'air">
+            <h3 class="loyers__title">Qualité de l'air</h3>
+            <p class="loyers__value air__value">{{ airStats.indiceAtmoMedian }}</p>
+            <p class="loyers__unit">{{ formatAirQuality(airStats.indiceAtmoMedian) }}</p>
+            <p class="loyers__year">Dernière année disponible {{ airStats.annee }}</p>
+
+            <div class="loyers__stats-grid">
+              @for (item of airQualityItems(); track item.label) {
+                <div class="loyers__stat">
+                  <span class="loyers__stat-value">{{ formatAirIndex(item.value) }}</span>
+                  <span class="loyers__stat-label">{{ item.label }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="loyers__stats-grid air__days-grid">
+              @for (item of airQualityDayItems(); track item.label) {
+                <div
+                  class="loyers__stat"
+                  [class.air__day--good]="item.className === 'air__day--good'"
+                  [class.air__day--medium]="item.className === 'air__day--medium'"
+                  [class.air__day--bad]="item.className === 'air__day--bad'"
+                >
+                  <span class="loyers__stat-value">{{ item.value }}</span>
+                  <span class="loyers__stat-label">{{ item.label }}</span>
+                </div>
+              }
+            </div>
+
+            @if (airQualityChartData(); as chartData) {
+              <div class="loyers__chart-wrapper">
+                <p-chart
+                  type="line"
+                  [data]="chartData"
+                  [options]="airQualityChartOptions"
+                  height="180px"
+                />
+              </div>
+            }
+          </section>
+        } @else {
+          <div class="city-detail-panel__state">
+            <p>Données de qualité de l'air non disponibles pour cette commune.</p>
           </div>
         }
       }

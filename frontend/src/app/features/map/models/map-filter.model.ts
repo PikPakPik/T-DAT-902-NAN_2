@@ -1,4 +1,9 @@
-export type MapFilterId = 'prix_m2' | 'densite' | 'criminalite' | 'loyer';
+export type MapFilterId =
+  | 'prix_m2'
+  | 'densite'
+  | 'criminalite'
+  | 'loyer'
+  | 'qualite_air';
 
 export interface MapFilter {
   id: MapFilterId;
@@ -30,6 +35,12 @@ export const DEFAULT_MAP_FILTERS: MapFilter[] = [
     id: 'loyer',
     label: 'Loyers',
     description: 'Appartement €/m²',
+    active: false,
+  },
+  {
+    id: 'qualite_air',
+    label: "Qualité de l'air",
+    description: 'Indice ATMO',
     active: false,
   },
 ];

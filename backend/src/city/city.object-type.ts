@@ -96,6 +96,42 @@ export class RentStatsType {
   evolutionPct: number | null;
 }
 
+@ObjectType({ description: "Statistiques de qualite de l'air communales" })
+export class AirQualityStatsType {
+  @Field(() => Int)
+  annee: number;
+
+  @Field(() => Int, { description: 'Indice ATMO median annuel' })
+  indiceAtmoMedian: number;
+
+  @Field(() => Float, { description: 'Sous-indice PM2.5 median annuel' })
+  pm25Median: number;
+
+  @Field(() => Float, { description: 'Sous-indice PM10 median annuel' })
+  pm10Median: number;
+
+  @Field(() => Float, { description: 'Sous-indice NO2 median annuel' })
+  no2Median: number;
+
+  @Field(() => Float, { description: 'Sous-indice O3 median annuel' })
+  o3Median: number;
+
+  @Field(() => Int)
+  nbJoursBon: number;
+
+  @Field(() => Int)
+  nbJoursMoyen: number;
+
+  @Field(() => Int)
+  nbJoursMauvais: number;
+
+  @Field(() => Float, {
+    nullable: true,
+    description: 'Evolution vs annee precedente en %',
+  })
+  evolutionPct: number | null;
+}
+
 @ObjectType({ description: 'Commune francaise' })
 export class CityType {
   @Field(() => Int)
@@ -135,4 +171,10 @@ export class CityType {
       'Loyer median appartement en euros par m2 (derniere annee disponible)',
   })
   loyerMedianApt: number | null;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: 'Indice ATMO median de la derniere annee disponible',
+  })
+  indiceAtmoMedian: number | null;
 }

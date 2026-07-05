@@ -1,6 +1,7 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { MapBoundsInput } from '../department/bounds.input';
 import {
+  AirQualityStatsType,
   CityType,
   CrimeStatsType,
   PopulationStatsType,
@@ -89,5 +90,27 @@ export class CityResolver {
     @Args('code', { description: 'Code INSEE commune' }) code: string,
   ): Promise<RentStatsType[]> {
     return this.cityService.findRentHistoryByCode(code);
+  }
+
+  @Query(() => AirQualityStatsType, {
+    name: 'cityAirQuality',
+    nullable: true,
+    description: "Statistiques de qualite de l'air les plus recentes pour une commune",
+  })
+  cityAirQuality(
+    @Args('code', { description: 'Code INSEE commune' }) code: string,
+  ): Promise<AirQualityStatsType | null> {
+    return this.cityService.findLatestAirQualityByCode(code);
+  }
+
+  @Query(() => [AirQualityStatsType], {
+    name: 'cityAirQualityHistory',
+    description:
+      "Historique des statistiques de qualite de l'air pour une commune, toutes annees disponibles",
+  })
+  cityAirQualityHistory(
+    @Args('code', { description: 'Code INSEE commune' }) code: string,
+  ): Promise<AirQualityStatsType[]> {
+    return this.cityService.findAirQualityHistoryByCode(code);
   }
 }

@@ -254,13 +254,14 @@ export class DevicesMapOverlay implements MapboxOverlay {
       if (!feature?.properties || !coordinates) return;
 
       const p = feature.properties;
+      const typeLabel = String(p['typeLabel'] ?? '').trim();
       this.#popup
         ?.setLngLat(coordinates)
         .setHTML(
           `<div class="device-popup">
             <strong>${escapeHtml(p['nom'])}</strong>
             <span>${escapeHtml(p['familyLabel'])}</span>
-            <small>${escapeHtml(p['typequ'])}</small>
+            ${typeLabel ? `<small>${escapeHtml(typeLabel)}</small>` : ''}
             <small>${escapeHtml(p['address'])}</small>
           </div>`,
         )

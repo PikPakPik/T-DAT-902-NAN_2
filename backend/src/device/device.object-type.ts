@@ -32,6 +32,9 @@ export class DeviceType {
   @Field()
   familyLabel: string;
 
+  @Field()
+  typeLabel: string;
+
   @Field(() => Float)
   longitude: number;
 

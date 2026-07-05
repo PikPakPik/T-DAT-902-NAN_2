@@ -39,7 +39,7 @@ flowchart TB
     subgraph spark["Apache Spark — local (Docker)"]
       SparkMaster["Spark master"]
       SparkWorker["Spark worker(s)"]
-      SparkJobs["Jobs PySpark<br/>spark/spark/"]
+      SparkJobs["Jobs PySpark<br/>spark-jobs/"]
     end
   end
 
@@ -70,29 +70,236 @@ flowchart TB
   SparkJobs -->|"JDBC → postgis:5432"| PostGIS
 ```
 
-## Diagramme — modèle de données (simplifié)
+## Diagramme — modèle de données PostGIS
 
-Schéma relationnel détaillé : lien [DB Diagram (Mermaid Live)](https://mermaid.live/edit#pako:eNrVWF9v4jgQ_yqRn9sKQoHC657uZXXSPZ-QLCeZgreO7Y5trmy33_0mIQkkhJDu7T3cC1JmfjOe_2PzzlKTAVuzjQb8TYotinyjowhhK4120XvxEUVSe9gCRjKL_vx6JO0FpjuBkRY5tCmFxiPFw5uP_n5Jiq-P4icDK9DnoP0vV51KL-FzWr85o8tPd-2UmuIkgm6TwKbyTM13aXkh5y7NO1lzcp-TYb9_bYx3kPqR8a6gpKBNtwjP8m1UvE76KWiHjilWmVHJKXDDRtTCOuQJYOdgYUVxeJt68u3cojx4MTY6MuM1_MjIhIfyp0M_VYMP2GWSxYAyJZCCgPzZ6FQCdmLrDxa4MqlQbSEX8FmkwBFAKeAJ6e0HeEAUsjrS5UIpcizSCbcSUnDcoqRzLdlQFVVmQqIgUkZvpQ91ZmsqnXMiNuqE1tDJR5W58xArcwAcim-fvtqfUpjnkEmhubB-gOunPh5iz6wKbgCQC-nqJDXllXCTOMD9sUja0hjfLHhHmXf85vjo19AfmVslQpl9a1yK-3jk9CWrLpyjJFyEwaPQTqQ9YYC9UaFsrVK9TX3H_XGDeWiO_f8jYY0NqiwimuR5HvRP1cP56OXHNdrDoAj6Tlc2p1-Pppe0q7zIbZQi0EzLuDiZj7AHHdy_sX2oy6tQcyeUkNhhZpBKBdMh5qqf6UWgLIiwR_CXeaQSE9tmpw55n6LMpRZK0qT_jyJQmpqKPEFp1MmsFpuqy3GB-XWmo8rke9LQByAy6HL27w5jvM4sjFiKhGo29VCTpko4BxzoKriV_bwLr-tO3IlEekGLqKfvixVYDIs-CyhZ2nkMqe9vFKkdwKfX38CqoxLkr6EolMMn911DkzqT5LLwuakmUGdw5fH8CmM66WVoE_fSzaxFPuuMbyag44m5xinn5jUetRst0pubsZyi1qDnzhs76nJKuItL4eU1PjfZz-e0x1B4DdLC2GdFUZOvoVNr1Flbg92q1yb_lXbWr6ofP-7vzXvrNbSONmwn3IZ1n0kVtrqf3IJdbvOWRKWlBtevjgFMdTMc0nJ-fxrA9a3XAfjFOhvA9g7_Afz5DBiAdet_AHpegS1YE-M6CuXzqgU5kir-6bFzHVNM_YJLw-gFssibAsPu2BZlxtY0TOGO0fygyzJ9srIhNszvyLwNK-QygS-FyAfJWKH_MiavxdCE7Y6tn4Vy9BVs8XKq_hZoIKAzwC8maM_Wj4tSBVu_sze2vp_Nlg-rxXSymi2f5stVwT2wdTxdPkziJ6LGk8ViEs8eP-7Y9_LU6cPycf60jBerxeNqPptN53eMBp43-Mfxf4ny74mPfwCSDb26) (README racine).
+Le schéma ci-dessous représente l'état applicatif actuel, après migrations
+PostGIS (`geom` au lieu des anciens champs `wkb`) et après séparation DVF entre
+`mutations` et `mutation_locals`.
 
 ```mermaid
 erDiagram
-  regions ||--o{ departments : contains
-  departments ||--o{ cities : contains
-  cities ||--o{ sections : contains
-  sections ||--o{ plots : contains
-  plots ||--o{ mutations : has
-  plots ||--o{ dpes : has
-  cities ||--o{ rents : has
-  cities ||--o{ stats : has
-  cities ||--o{ crimes : has
-  cities ||--o{ income : has
-  cities ||--o{ populate : has
-
-  MongoDB {
-    string reviews
-    string cities_ratings
+  regions {
+    integer id PK
+    varchar name
+    varchar code
+    geometry geom
   }
+
+  departments {
+    integer id PK
+    varchar name
+    varchar code
+    geometry geom
+    integer regionId FK
+  }
+
+  cities {
+    integer id PK
+    varchar name
+    text names
+    varchar code
+    varchar siren
+    varchar epci
+    text zipCodes
+    geometry geom
+    integer departmentId FK
+  }
+
+  sections {
+    integer id PK
+    varchar prefixe
+    varchar code
+    varchar section_key
+    geometry geom
+    integer cityId FK
+  }
+
+  plots {
+    integer id PK
+    geometry geom
+    varchar number
+    varchar capacity
+    integer sectionId FK
+  }
+
+  mutations {
+    integer id PK
+    varchar id_mutation
+    date date_mutation
+    smallint annee
+    varchar nature_mutation
+    numeric valeur_fonciere
+    integer nb_lots
+    numeric surface_habitable
+    numeric prix_m2
+    double longitude
+    double latitude
+  }
+
+  mutation_locals {
+    integer id PK
+    varchar type_local
+    numeric surface_reelle_bati
+    integer nombre_pieces_principales
+    numeric surface_terrain
+    varchar id_parcelle
+    integer mutationId FK
+    integer plotId FK
+  }
+
+  dpes {
+    integer id PK
+    varchar dpe_id
+    smallint annee
+    varchar classe_energie
+    varchar classe_ges
+    numeric surface_habitable
+    varchar type_batiment
+    smallint annee_construction
+    varchar code_insee
+    double longitude
+    double latitude
+    integer plotId FK
+  }
+
+  rents {
+    integer id PK
+    smallint annee
+    numeric loyer_median_apt
+    numeric loyer_median_t1t2
+    numeric loyer_median_t3plus
+    numeric loyer_median_maison
+    integer nb_observations
+    numeric r2
+    integer cityId FK
+  }
+
+  stats_cities {
+    integer id PK
+    smallint annee
+    varchar type_local
+    numeric prix_median_m2
+    numeric prix_moyen_m2
+    numeric surface_mediane
+    integer nb_transactions
+    numeric evolution_prix_pct
+    integer cityId FK
+  }
+
+  stats_departments {
+    integer id PK
+    smallint annee
+    varchar type_local
+    numeric prix_median_m2
+    numeric prix_moyen_m2
+    numeric surface_mediane
+    integer nb_transactions
+    numeric evolution_prix_pct
+    integer departmentId FK
+  }
+
+  stats_sections {
+    integer id PK
+    smallint annee
+    varchar type_local
+    numeric prix_median_m2
+    numeric prix_moyen_m2
+    numeric surface_mediane
+    integer nb_transactions
+    numeric evolution_prix_pct
+    integer sectionId FK
+  }
+
+  populate_cities {
+    integer id PK
+    integer population
+    smallint annee
+    timestamp created_at
+    integer cityId FK
+  }
+
+  income_cities {
+    integer id PK
+    smallint annee
+    numeric mediane_salaire
+    numeric decile1_salaire
+    numeric decile9_salaire
+    numeric taux_pauvrete
+    integer nb_menages
+    timestamp created_at
+    integer cityId FK
+  }
+
+  crimes_cities {
+    integer id PK
+    smallint annee
+    numeric taux_cambriolages
+    numeric taux_vols_armes
+    numeric taux_vols_sans_viol
+    numeric taux_violences_phys
+    timestamp created_at
+    integer cityId FK
+  }
+
+  air_quality {
+    integer id PK
+    smallint annee
+    smallint indice_atmo_median
+    numeric pm25_median
+    numeric pm10_median
+    numeric no2_median
+    numeric o3_median
+    integer nb_jours_bon
+    integer nb_jours_moyen
+    integer nb_jours_mauvais
+    integer cityId FK
+  }
+
+  transport_stops {
+    integer id PK
+    varchar stop_id
+    varchar name
+    varchar mode
+    point longitude
+    point latitude
+    integer cityId FK
+  }
+
+  devices {
+    integer id PK
+    varchar nom
+    varchar address
+    varchar typequ
+    varchar categorie
+    varchar dom
+    varchar sdom
+    varchar libcom
+    double longitude
+    double latitude
+    integer cityId FK
+  }
+
+  regions ||--o{ departments : has
+  departments ||--o{ cities : has
+  departments ||--o{ stats_departments : has
+  cities ||--o{ sections : has
+  cities ||--o{ rents : has
+  cities ||--o{ stats_cities : has
+  cities ||--o{ populate_cities : has
+  cities ||--o{ income_cities : has
+  cities ||--o{ crimes_cities : has
+  cities ||--o{ air_quality : has
+  cities ||--o{ transport_stops : has
+  cities ||--o{ devices : has
+  sections ||--o{ plots : has
+  sections ||--o{ stats_sections : has
+  plots ||--o{ mutation_locals : has
+  plots ||--o{ dpes : has
+  mutations ||--o{ mutation_locals : has
 ```
+
+Côté MongoDB, les collections `cities` et `reviews` stockent les avis, les notes
+agrégées, le sentiment NLP et les données de wordcloud.
 
 ---
 
@@ -162,10 +369,11 @@ erDiagram
 | `download_carte_loyers` | API data.gouv.fr | `./airflow/data/carte_loyers` | **Spark** → `rents` |
 | `download_delinquance_communale` | data.gouv.fr | staging | **Spark** → `crimes` |
 | `download_ademe_dpe` | data.ademe.fr | staging | **Spark** → `dpes` |
-| `download_filosofi` / `download_recensement` | insee.fr | staging | **Spark** → `income`, `populate` |
-| `download_rnic` | data.gouv.fr | staging | **Spark** (selon modèle cible) |
+| `download_filosofi` / `download_recensement_populations_legales` | insee.fr | staging | **Spark** → `income`, `populate` |
+| `download_rnic` | data.gouv.fr | staging | chargement PostGIS |
 
-**Plugin** : `airflow/plugins/load_contours.py` — seul chargement PostGIS côté Airflow (hors Spark).
+**Plugins Airflow** : `airflow/plugins/` contient les helpers de téléchargement,
+les loaders directs PostGIS et le déclenchement Spark.
 
 **Volume partagé** : `./airflow/data` → `/opt/airflow/data` — zone de staging consommée par les jobs Spark.
 
@@ -175,7 +383,7 @@ Voir aussi [README_AIRFLOW.md](./README_AIRFLOW.md).
 
 - **Rôle** : pipeline batch pour les jeux volumineux ou multi-fichiers (CSV.gz DVF, cadastre national, séries temporelles INSEE).
 - **Pourquoi Spark** : parallélisation, API DataFrame/SQL pour jointures à grande échelle, même stack reproductible sur la machine de chaque dev.
-- **Déploiement** : cluster Spark **local** via `docker compose` (pas de Databricks ni cloud) — services `spark-master` / `spark-worker` à ajouter, scripts PySpark dans `spark/` (à créer).
+- **Déploiement** : cluster Spark **local** via `docker compose` (pas de Databricks ni cloud) — services `spark-master` / `spark-worker`, scripts PySpark dans `spark-jobs/`.
 - **Intégration** : Airflow enchaîne *download* puis `spark-submit` (ou `DockerOperator`) ; jobs lisent `/opt/airflow/data`, écrivent sur `postgis:5432` (réseau Compose).
 - **Mode dev minimal** : `local[*]` sur la machine hôte possible pour prototyper hors cluster, mais la cible projet reste **100 % locale dans Docker**.
 
@@ -217,7 +425,9 @@ sequenceDiagram
   end
 ```
 
-**État actuel** : source → PostGIS **opérationnel** pour les contours (Airflow seul). Les autres DAGs alimentent le **staging** ; le traitement **Spark → PostGIS** est la cible d’implémentation pour `plots`, `mutations`, `rents`, etc.
+**État actuel** : les contours et certains chargements directs sont pris en charge
+par Airflow ; les jeux volumineux passent par Spark ou par des loaders bulk
+dedies avant chargement PostGIS.
 
 ### 2. Requête utilisateur (online)
 
@@ -254,7 +464,7 @@ sequenceDiagram
 docker compose up --build
 ```
 
-Ordre de démarrage : PostGIS + MongoDB → Backend (health) → Frontend ; stack Airflow après `airflow-init` ; Spark local avec les mêmes volumes/réseau Compose (à intégrer).
+Ordre de démarrage : PostGIS + MongoDB → Backend (health) → Frontend ; stack Airflow après `airflow-init` ; Spark local partage les mêmes volumes et le même réseau Compose.
 
 **Principe** : aucun service cloud (Databricks) — extract, transform et load tournent sur l’environnement local du projet.
 
@@ -278,13 +488,16 @@ Ordre de démarrage : PostGIS + MongoDB → Backend (health) → Frontend ; stac
 
 ---
 
-## Évolutions prévues (architecture)
+## Évolutions possibles
 
-1. **Services Spark dans `compose.yaml`** : master + worker, image officielle, volumes `./airflow/data` et `./spark`.
-2. **Jobs PySpark** : un job par jeu (DVF, cadastre, …), écriture JDBC PostGIS alignée sur les entités NestJS.
-3. **DAGs Airflow** : tâche `spark-submit` après chaque `download_*` concerné.
-4. **Smoke test** : DAG `homepedia_stack_smoke` — à (re)créer (voir [README_AIRFLOW.md](./README_AIRFLOW.md)).
-5. **Production** : même topologie locale ou VM dédiée (pas de Databricks) ; reverse proxy, `synchronize: false`, build frontend statique.
+1. **Tuiles vectorielles PostGIS** : endpoint MVT pour les parcelles afin de
+   reduire le GeoJSON cote front.
+2. **Observabilite Airflow** : rapports de volume par DAG et alertes sur les
+   sources externes instables.
+3. **Qualite des donnees** : jeux de controles automatises apres chargement
+   (volumes, taux de rattachement parcelle, valeurs aberrantes).
+4. **Production** : reverse proxy, variables secretes externalisees,
+   `synchronize: false`, build frontend statique.
 
 ---
 

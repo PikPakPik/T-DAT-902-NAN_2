@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { MapBoundsInput } from '../department/bounds.input';
 import { City } from './city.entity';
 import {
+  AirQualityStatsType,
   CityType,
   CrimeStatsType,
   PopulationStatsType,
@@ -19,6 +20,7 @@ interface CityRow {
   densite: string | null;
   criminaliteScore: string | null;
   loyerMedianApt: string | null;
+  indiceAtmoMedian: string | null;
 }
 
 @Injectable()
@@ -81,7 +83,14 @@ export class CityService {
           WHERE r."cityId" = c.id
           ORDER BY r.annee DESC
           LIMIT 1
-        ) AS "loyerMedianApt"
+        ) AS "loyerMedianApt",
+        (
+          SELECT aq.indice_atmo_median
+          FROM air_quality aq
+          WHERE aq."cityId" = c.id
+          ORDER BY aq.annee DESC
+          LIMIT 1
+        ) AS "indiceAtmoMedian"
       FROM cities c
       WHERE ST_Intersects(
         c.geom,
@@ -103,6 +112,8 @@ export class CityService {
         row.criminaliteScore != null ? Number(row.criminaliteScore) : null,
       loyerMedianApt:
         row.loyerMedianApt != null ? Number(row.loyerMedianApt) : null,
+      indiceAtmoMedian:
+        row.indiceAtmoMedian != null ? Number(row.indiceAtmoMedian) : null,
     }));
   }
 
@@ -353,6 +364,92 @@ export class CityService {
     return rows.map((row) => this.mapRentRow(row));
   }
 
+  async findLatestAirQualityByCode(
+    code: string,
+  ): Promise<AirQualityStatsType | null> {
+    const rows = await this.cityRepository.query<
+      {
+        annee: string;
+        indice_atmo_median: string;
+        pm25_median: string;
+        pm10_median: string;
+        no2_median: string;
+        o3_median: string;
+        nb_jours_bon: string;
+        nb_jours_moyen: string;
+        nb_jours_mauvais: string;
+        evolution_pct: string | null;
+      }[]
+    >(
+      `
+      SELECT
+        aq.annee,
+        aq.indice_atmo_median,
+        aq.pm25_median,
+        aq.pm10_median,
+        aq.no2_median,
+        aq.o3_median,
+        aq.nb_jours_bon,
+        aq.nb_jours_moyen,
+        aq.nb_jours_mauvais,
+        NULL AS evolution_pct
+      FROM air_quality aq
+      JOIN cities c ON c.id = aq."cityId"
+      WHERE c.code = $1
+      ORDER BY aq.annee DESC
+      LIMIT 1
+      `,
+      [code],
+    );
+
+    if (!rows.length) return null;
+    return this.mapAirQualityRow(rows[0]);
+  }
+
+  async findAirQualityHistoryByCode(
+    code: string,
+  ): Promise<AirQualityStatsType[]> {
+    const rows = await this.cityRepository.query<
+      {
+        annee: string;
+        indice_atmo_median: string;
+        pm25_median: string;
+        pm10_median: string;
+        no2_median: string;
+        o3_median: string;
+        nb_jours_bon: string;
+        nb_jours_moyen: string;
+        nb_jours_mauvais: string;
+        evolution_pct: string | null;
+      }[]
+    >(
+      `
+      SELECT
+        aq.annee,
+        aq.indice_atmo_median,
+        aq.pm25_median,
+        aq.pm10_median,
+        aq.no2_median,
+        aq.o3_median,
+        aq.nb_jours_bon,
+        aq.nb_jours_moyen,
+        aq.nb_jours_mauvais,
+        ROUND(
+          (aq.indice_atmo_median - LAG(aq.indice_atmo_median) OVER (ORDER BY aq.annee))::numeric
+          / NULLIF(LAG(aq.indice_atmo_median) OVER (ORDER BY aq.annee), 0) * 100,
+          2
+        ) AS evolution_pct
+      FROM air_quality aq
+      JOIN cities c ON c.id = aq."cityId"
+      WHERE c.code = $1
+      ORDER BY aq.annee ASC
+      `,
+      [code],
+    );
+
+    return rows.map((row) => this.mapAirQualityRow(row));
+  }
+
   private mapRentRow(row: {
     annee: string;
     loyer_median_apt: string | null;
@@ -374,6 +471,32 @@ export class CityService {
         row.loyer_median_maison != null ? Number(row.loyer_median_maison) : null,
       nbObservations:
         row.nb_observations != null ? Number(row.nb_observations) : null,
+      evolutionPct: row.evolution_pct != null ? Number(row.evolution_pct) : null,
+    };
+  }
+
+  private mapAirQualityRow(row: {
+    annee: string;
+    indice_atmo_median: string;
+    pm25_median: string;
+    pm10_median: string;
+    no2_median: string;
+    o3_median: string;
+    nb_jours_bon: string;
+    nb_jours_moyen: string;
+    nb_jours_mauvais: string;
+    evolution_pct: string | null;
+  }): AirQualityStatsType {
+    return {
+      annee: Number(row.annee),
+      indiceAtmoMedian: Number(row.indice_atmo_median),
+      pm25Median: Number(row.pm25_median),
+      pm10Median: Number(row.pm10_median),
+      no2Median: Number(row.no2_median),
+      o3Median: Number(row.o3_median),
+      nbJoursBon: Number(row.nb_jours_bon),
+      nbJoursMoyen: Number(row.nb_jours_moyen),
+      nbJoursMauvais: Number(row.nb_jours_mauvais),
       evolutionPct: row.evolution_pct != null ? Number(row.evolution_pct) : null,
     };
   }

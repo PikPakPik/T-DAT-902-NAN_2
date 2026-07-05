@@ -62,7 +62,9 @@
                 </div>
                 <div class="device-card__main">
                   <h4>{{ device.nom }}</h4>
-                  <p>{{ deviceTypeLabel(device) }}</p>
+                  @if (deviceTypeLabel(device); as typeLabel) {
+                    <p>{{ typeLabel }}</p>
+                  }
                   <small>{{ deviceAddressLabel(device) }}</small>
                 </div>
                 <strong>{{ deviceDistanceLabel(device) }}</strong>
