@@ -10,6 +10,17 @@ import {
   adminFillColorExpression,
   formatPriceM2,
 } from '../shared/price-colors';
+import { densityFillColorExpression, formatDensity } from '../shared/density-colors';
+import {
+  criminalityFillColorExpression,
+  formatCriminality,
+} from '../shared/criminality-colors';
+import { rentFillColorExpression, formatRent } from '../shared/rent-colors';
+import {
+  airQualityFillColorExpression,
+  formatAirQuality,
+} from '../shared/air-quality-colors';
+import type { MapFilterId } from '../../models/map-filter.model';
 
 const REGIONS_SOURCE_ID = 'regions-fr';
 const REGIONS_FILL_LAYER_ID = 'regions-fr-fill';
@@ -30,6 +41,8 @@ export class RegionsMapOverlay implements MapboxOverlay {
   #onZoomEnd?: () => void;
   #detailViewActive = false;
 
+  #activeChoropleth: MapFilterId = 'prix_m2';
+
   constructor(geoJson: RegionsFeatureCollection) {
     this.#geoJson = geoJson;
   }
@@ -43,6 +56,28 @@ export class RegionsMapOverlay implements MapboxOverlay {
   onStyleChanged(ctx: MapOverlayContext): void {
     this.destroy();
     this.attach(ctx);
+    if (this.#activeChoropleth) {
+      this.setChoropleth(this.#activeChoropleth);
+    }
+  }
+
+  setChoropleth(key: MapFilterId): void {
+    this.#activeChoropleth = key;
+    const map = this.#map;
+    if (!map || !map.getLayer(REGIONS_FILL_LAYER_ID)) return;
+
+    const expression =
+      key === 'densite'
+        ? densityFillColorExpression()
+        : key === 'criminalite'
+          ? criminalityFillColorExpression()
+          : key === 'loyer'
+            ? rentFillColorExpression()
+            : key === 'qualite_air'
+              ? airQualityFillColorExpression()
+              : adminFillColorExpression();
+
+    map.setPaintProperty(REGIONS_FILL_LAYER_ID, 'fill-color', expression);
   }
 
   setVisible(visible: boolean): void {
@@ -186,19 +221,12 @@ export class RegionsMapOverlay implements MapboxOverlay {
       if (!center) return;
 
       const name = feature.properties?.['name'] ?? 'Région';
-      const prixRaw = feature.properties?.['prixMedianM2'];
-      const prix =
-        typeof prixRaw === 'number'
-          ? prixRaw
-          : prixRaw != null
-            ? Number(prixRaw)
-            : null;
-      const priceLabel = formatPriceM2(prix);
+      const metricLabel = this.#formatActiveMetric(feature);
 
       this.#popup
         ?.setLngLat(center)
         .setHTML(
-          `<div><strong>${name}</strong><br/><span>${priceLabel}</span></div>`,
+          `<div><strong>${name}</strong><br/><span>${metricLabel}</span></div>`,
         )
         .addTo(map);
     };
@@ -249,6 +277,32 @@ export class RegionsMapOverlay implements MapboxOverlay {
 
   #isRegionInteractionDisabled(map: mapboxgl.Map): boolean {
     return this.#detailViewActive || map.getZoom() > REGION_OVERVIEW_MAX_ZOOM;
+  }
+
+  #numberProperty(feature: GeoJSON.Feature, property: string): number | null {
+    const raw = feature.properties?.[property];
+    const value = typeof raw === 'number' ? raw : raw != null ? Number(raw) : null;
+    return value != null && Number.isFinite(value) ? value : null;
+  }
+
+  #formatActiveMetric(feature: GeoJSON.Feature): string {
+    if (this.#activeChoropleth === 'densite') {
+      return formatDensity(this.#numberProperty(feature, 'densite'));
+    }
+
+    if (this.#activeChoropleth === 'criminalite') {
+      return formatCriminality(this.#numberProperty(feature, 'criminaliteScore'));
+    }
+
+    if (this.#activeChoropleth === 'loyer') {
+      return formatRent(this.#numberProperty(feature, 'loyerMedianApt'));
+    }
+
+    if (this.#activeChoropleth === 'qualite_air') {
+      return formatAirQuality(this.#numberProperty(feature, 'indiceAtmoMedian'));
+    }
+
+    return formatPriceM2(this.#numberProperty(feature, 'prixMedianM2'));
   }
 
   #clearHoverState(): void {

@@ -40,3 +40,11 @@ export function densityFillColorExpression(): ExpressionSpecification {
     ],
   ];
 }
+
+export function formatDensity(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return 'Données indisponibles';
+  }
+
+  return `${Math.round(value).toLocaleString('fr-FR')} hab/km²`;
+}

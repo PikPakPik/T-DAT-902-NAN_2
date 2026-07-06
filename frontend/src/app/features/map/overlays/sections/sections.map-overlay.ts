@@ -7,9 +7,11 @@ import type { MapboxOverlay, MapOverlayContext } from '../map-overlay.types';
 import { MAP_PLOTS_MIN_ZOOM } from '../../constants/map-view.constants';
 import type { SectionsFeatureCollection } from '../../services/graphql/sections-graphql.service';
 import {
+  ADMIN_NO_DATA_COLOR,
   adminFillColorExpression,
   formatPriceM2,
 } from '../shared/price-colors';
+import type { MapFilterId } from '../../models/map-filter.model';
 
 const SECTIONS_SOURCE_ID = 'sections-fr';
 const SECTIONS_FILL_LAYER_ID = 'sections-fr-fill';
@@ -35,6 +37,8 @@ export class SectionsMapOverlay implements MapboxOverlay {
   #detailViewActive = false;
   #interactionsBound = false;
 
+  #activeChoropleth: MapFilterId = 'prix_m2';
+
   constructor(private readonly onSectionSelect?: SectionSelectHandler) {}
 
   attach(ctx: MapOverlayContext): void {
@@ -49,6 +53,9 @@ export class SectionsMapOverlay implements MapboxOverlay {
       this.#updateSourceData();
       this.#bindInteractions();
     }
+    if (this.#activeChoropleth) {
+      this.setChoropleth(this.#activeChoropleth);
+    }
   }
 
   setData(geoJson: SectionsFeatureCollection): void {
@@ -58,6 +65,23 @@ export class SectionsMapOverlay implements MapboxOverlay {
     this.#ensureLayers();
     this.#updateSourceData();
     this.#bindInteractions();
+  }
+
+  /**
+   * Le prix au m² est la seule métrique disponible à la granularité section
+   * (densité/criminalité/loyer/qualité de l'air ne sont mesurées qu'au niveau commune).
+   * Pour tout autre filtre, on affiche donc explicitement "pas de donnée" plutôt que
+   * de rebasculer silencieusement sur le prix.
+   */
+  setChoropleth(key: MapFilterId): void {
+    this.#activeChoropleth = key;
+    const map = this.#map;
+    if (!map || !map.getLayer(SECTIONS_FILL_LAYER_ID)) return;
+
+    const expression =
+      key === 'prix_m2' ? adminFillColorExpression() : ADMIN_NO_DATA_COLOR;
+
+    map.setPaintProperty(SECTIONS_FILL_LAYER_ID, 'fill-color', expression);
   }
 
   destroy(): void {
@@ -200,18 +224,12 @@ export class SectionsMapOverlay implements MapboxOverlay {
       if (!center) return;
 
       const name = feature.properties?.['name'] ?? 'Section';
-      const prixRaw = feature.properties?.['prixMedianM2'];
-      const prix =
-        typeof prixRaw === 'number'
-          ? prixRaw
-          : prixRaw != null
-            ? Number(prixRaw)
-            : null;
+      const metricLabel = this.#formatActiveMetric(feature);
 
       this.#popup
         ?.setLngLat(center)
         .setHTML(
-          `<div><strong>${name}</strong><br/><span>${formatPriceM2(prix)}</span></div>`,
+          `<div><strong>${name}</strong><br/><span>${metricLabel}</span></div>`,
         )
         .addTo(map);
     };
@@ -282,6 +300,17 @@ export class SectionsMapOverlay implements MapboxOverlay {
 
   #isSectionInteractionDisabled(map: mapboxgl.Map): boolean {
     return this.#detailViewActive || map.getZoom() >= MAP_PLOTS_MIN_ZOOM;
+  }
+
+  #formatActiveMetric(feature: GeoJSON.Feature): string {
+    if (this.#activeChoropleth !== 'prix_m2') {
+      return 'Donnée disponible au niveau commune uniquement';
+    }
+
+    const prixRaw = feature.properties?.['prixMedianM2'];
+    const prix =
+      typeof prixRaw === 'number' ? prixRaw : prixRaw != null ? Number(prixRaw) : null;
+    return formatPriceM2(prix);
   }
 
   #clearHoverState(): void {

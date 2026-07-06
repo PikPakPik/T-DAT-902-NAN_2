@@ -11,20 +11,35 @@ export interface DepartmentGql {
   code: string;
   geometry: string;
   prixMedianM2: number | null;
+  densite: number | null;
+  criminaliteScore: number | null;
+  loyerMedianApt: number | null;
+  indiceAtmoMedian: number | null;
 }
 
 interface DepartmentsInBoundsQueryResponse {
   departmentsInBounds?: DepartmentGql[];
 }
 
+export interface DepartmentProperties {
+  id: number;
+  name: string;
+  code: string;
+  prixMedianM2: number | null;
+  densite: number | null;
+  criminaliteScore: number | null;
+  loyerMedianApt: number | null;
+  indiceAtmoMedian: number | null;
+}
+
 export type DepartmentFeature = GeoJSON.Feature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  { id: number; name: string; code: string; prixMedianM2: number | null }
+  DepartmentProperties
 >;
 
 export type DepartmentsFeatureCollection = GeoJSON.FeatureCollection<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  { id: number; name: string; code: string; prixMedianM2: number | null }
+  DepartmentProperties
 >;
 
 const QUERY_DEPARTMENTS_IN_BOUNDS = gql`
@@ -35,6 +50,10 @@ const QUERY_DEPARTMENTS_IN_BOUNDS = gql`
       code
       geometry
       prixMedianM2
+      densite
+      criminaliteScore
+      loyerMedianApt
+      indiceAtmoMedian
     }
   }
 `;
@@ -113,6 +132,10 @@ export class DepartmentsGraphqlService {
         name: department.name,
         code: department.code,
         prixMedianM2: department.prixMedianM2,
+        densite: department.densite,
+        criminaliteScore: department.criminaliteScore,
+        loyerMedianApt: department.loyerMedianApt,
+        indiceAtmoMedian: department.indiceAtmoMedian,
       },
       geometry: JSON.parse(department.geometry) as
         | GeoJSON.Polygon

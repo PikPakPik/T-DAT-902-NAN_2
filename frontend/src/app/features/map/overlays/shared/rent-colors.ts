@@ -30,3 +30,13 @@ export function rentFillColorExpression(): ExpressionSpecification {
     ],
   ];
 }
+
+export function formatRent(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return 'Données indisponibles';
+  }
+
+  return `${value.toLocaleString('fr-FR', {
+    maximumFractionDigits: 2,
+  })} €/m²`;
+}

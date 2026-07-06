@@ -4,9 +4,12 @@ import type { MapboxOverlay, MapOverlayContext } from '../map-overlay.types';
 import { MAP_SECTIONS_MIN_ZOOM } from '../../constants/map-view.constants';
 import type { CitiesFeatureCollection } from '../../services/graphql/cities-graphql.service';
 import { adminFillColorExpression, formatPriceM2 } from '../shared/price-colors';
-import { densityFillColorExpression } from '../shared/density-colors';
-import { criminalityFillColorExpression } from '../shared/criminality-colors';
-import { rentFillColorExpression } from '../shared/rent-colors';
+import { densityFillColorExpression, formatDensity } from '../shared/density-colors';
+import {
+  criminalityFillColorExpression,
+  formatCriminality,
+} from '../shared/criminality-colors';
+import { rentFillColorExpression, formatRent } from '../shared/rent-colors';
 import {
   airQualityFillColorExpression,
   formatAirQuality,
@@ -319,45 +322,17 @@ export class CitiesMapOverlay implements MapboxOverlay {
     return value != null && Number.isFinite(value) ? value : null;
   }
 
-  #formatDensity(value: number | null): string {
-    if (value == null || value <= 0) {
-      return 'Données indisponibles';
-    }
-
-    return `${Math.round(value).toLocaleString('fr-FR')} hab/km²`;
-  }
-
-  #formatCriminality(value: number | null): string {
-    if (value == null || value <= 0) {
-      return 'Données indisponibles';
-    }
-
-    return `Score criminalité ${value.toLocaleString('fr-FR', {
-      maximumFractionDigits: 1,
-    })}`;
-  }
-
-  #formatRent(value: number | null): string {
-    if (value == null || value <= 0) {
-      return 'Données indisponibles';
-    }
-
-    return `${value.toLocaleString('fr-FR', {
-      maximumFractionDigits: 2,
-    })} €/m²`;
-  }
-
   #formatActiveMetric(feature: GeoJSON.Feature): string {
     if (this.#activeChoropleth === 'densite') {
-      return this.#formatDensity(this.#numberProperty(feature, 'densite'));
+      return formatDensity(this.#numberProperty(feature, 'densite'));
     }
 
     if (this.#activeChoropleth === 'criminalite') {
-      return this.#formatCriminality(this.#numberProperty(feature, 'criminaliteScore'));
+      return formatCriminality(this.#numberProperty(feature, 'criminaliteScore'));
     }
 
     if (this.#activeChoropleth === 'loyer') {
-      return this.#formatRent(this.#numberProperty(feature, 'loyerMedianApt'));
+      return formatRent(this.#numberProperty(feature, 'loyerMedianApt'));
     }
 
     if (this.#activeChoropleth === 'qualite_air') {

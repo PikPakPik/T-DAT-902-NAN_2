@@ -355,6 +355,9 @@ export class MapboxMapFacade {
 
   setChoropleth(key: MapFilterId): void {
     this.#citiesOverlay.setChoropleth(key);
+    this.#departmentsOverlay.setChoropleth(key);
+    this.#regionsOverlay?.setChoropleth(key);
+    this.#sectionsOverlay.setChoropleth(key);
   }
 
   setDevicesVisible(visible: boolean): void {

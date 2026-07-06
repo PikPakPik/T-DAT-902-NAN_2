@@ -8,15 +8,30 @@ export interface RegionGql {
   code: string;
   geometry: string;
   prixMedianM2: number | null;
+  densite: number | null;
+  criminaliteScore: number | null;
+  loyerMedianApt: number | null;
+  indiceAtmoMedian: number | null;
 }
 
 interface RegionsQueryResponse {
   regions?: RegionGql[];
 }
 
+export interface RegionProperties {
+  id: number;
+  name: string;
+  code: string;
+  prixMedianM2: number | null;
+  densite: number | null;
+  criminaliteScore: number | null;
+  loyerMedianApt: number | null;
+  indiceAtmoMedian: number | null;
+}
+
 export type RegionsFeatureCollection = GeoJSON.FeatureCollection<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
-  { id: number; name: string; code: string; prixMedianM2: number | null }
+  RegionProperties
 >;
 
 const QUERY_REGIONS = gql`
@@ -27,6 +42,10 @@ const QUERY_REGIONS = gql`
       code
       geometry
       prixMedianM2
+      densite
+      criminaliteScore
+      loyerMedianApt
+      indiceAtmoMedian
     }
   }
 `;
@@ -59,6 +78,10 @@ export class RegionsGraphqlService {
           name: region.name,
           code: region.code,
           prixMedianM2: region.prixMedianM2,
+          densite: region.densite,
+          criminaliteScore: region.criminaliteScore,
+          loyerMedianApt: region.loyerMedianApt,
+          indiceAtmoMedian: region.indiceAtmoMedian,
         },
         geometry: JSON.parse(region.geometry) as
           | GeoJSON.Polygon

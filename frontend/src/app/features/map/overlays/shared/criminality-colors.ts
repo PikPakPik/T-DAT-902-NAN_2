@@ -30,3 +30,13 @@ export function criminalityFillColorExpression(): ExpressionSpecification {
     ],
   ];
 }
+
+export function formatCriminality(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return 'Données indisponibles';
+  }
+
+  return `Score criminalité ${value.toLocaleString('fr-FR', {
+    maximumFractionDigits: 1,
+  })}`;
+}
